@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import threading
 
-import roslib; roslib.load_manifest('tue_teleop_keyboard')
+import roslib; roslib.load_manifest('tools')
 import rospy
 
 from geometry_msgs.msg import Twist
