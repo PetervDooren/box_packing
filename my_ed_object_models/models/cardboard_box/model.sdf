@@ -1,0 +1,126 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="cardboard_box">
+    <link name="1_link">
+      <collision name="1_col">
+        <geometry>
+          <box>
+            <size>0.22 0.235 0.05</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="1_vis">
+        <geometry>
+          <box>
+            <size>0.22 0.235 0.05</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+        </material>
+      </visual>
+      <pose>0 0 0.0025 0 0 0</pose>
+    </link>
+    <link name="2_link">
+      <collision name="2_col">
+        <geometry>
+          <box>
+            <size>0.22 0.05 0.11</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="2_vis">
+        <geometry>
+          <box>
+            <size>0.22 0.05 0.11</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+        </material>
+      </visual>
+      <pose>0 -0.1175 0.055 0 0 0</pose>
+    </link>
+    <link name="3_link">
+      <collision name="3_col">
+        <geometry>
+          <box>
+            <size>0.22 0.05 0.11</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="3_vis">
+        <geometry>
+          <box>
+            <size>0.22 0.05 0.11</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+        </material>
+      </visual>
+      <pose>0 0.1175 0.055 0 0 0</pose>
+    </link>
+    <link name="4_link">
+      <collision name="4_col">
+        <geometry>
+          <box>
+            <size>0.05 0.235 0.11</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="4_vis">
+        <geometry>
+          <box>
+            <size>0.05 0.235 0.11</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+        </material>
+      </visual>
+      <pose>-0.11 0 0.055 0 0 0</pose>
+    </link>
+    <link name="5_link">
+      <collision name="5_col">
+        <geometry>
+          <box>
+            <size>0.05 0.235 0.11</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="5_vis">
+        <geometry>
+          <box>
+            <size>0.05 0.235 0.11</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+        </material>
+      </visual>
+      <pose>0.11 0 0.055 0 0 0</pose>
+    </link>
+    <link name="on_top_of">
+      <virtual_volume name="on_top_of_vv">
+        <geometry>
+          <box>
+            <size>0.22 0.235 0.4</size>
+          </box>
+        </geometry>
+        <pose>0.0 0.0 0.42 0 0 0</pose>
+      </virtual_volume>
+    </link>
+    <link name="in">
+      <virtual_volume name="in_vv">
+        <geometry>
+          <box>
+            <size>0.22 0.235 0.22</size>
+          </box>
+        </geometry>
+        <pose>0.0 0.0 0.11 0 0 0</pose>
+      </virtual_volume>
+    </link>
+    <static>true</static>
+  </model>
+</sdf>
