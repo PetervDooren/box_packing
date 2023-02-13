@@ -34,6 +34,8 @@
 
 /* Author: Ioan Sucan, Ridhwan Luthra*/
 
+#include <iostream>
+
 // ROS
 #include <ros/ros.h>
 #include <std_srvs/Trigger.h>
@@ -100,7 +102,7 @@ void pick(moveit::planning_interface::MoveGroupInterface& move_group)
   tf2::Quaternion orientation;
   orientation.setRPY(-tau / 4, -tau / 8, -tau / 4);
   grasps[0].grasp_pose.pose.orientation = tf2::toMsg(orientation);
-  grasps[0].grasp_pose.pose.position.x = 0.4;
+  grasps[0].grasp_pose.pose.position.x = 0.3;
   grasps[0].grasp_pose.pose.position.y = 0.6;
   grasps[0].grasp_pose.pose.position.z = 1.1;
 
@@ -135,7 +137,7 @@ void pick(moveit::planning_interface::MoveGroupInterface& move_group)
 
   // BEGIN_SUB_TUTORIAL pick3
   // Set support surface as table1.
-  move_group.setSupportSurfaceName("table1");
+  move_group.setSupportSurfaceName("table");
   // Call pick to pick up the object using the grasps given
   move_group.pick("rice1", grasps);
   // END_SUB_TUTORIAL
@@ -161,8 +163,8 @@ void place(moveit::planning_interface::MoveGroupInterface& group)
 
   /* For place location, we set the value to the exact location of the center of the object. */
   place_location[0].place_pose.pose.position.x = 0;
-  place_location[0].place_pose.pose.position.y = 0.5;
-  place_location[0].place_pose.pose.position.z = 0.5;
+  place_location[0].place_pose.pose.position.y = 0.4;
+  place_location[0].place_pose.pose.position.z = 0.2;
 
   // Setting pre-place approach
   // ++++++++++++++++++++++++++
@@ -188,7 +190,7 @@ void place(moveit::planning_interface::MoveGroupInterface& group)
   openGripper(place_location[0].post_place_posture);
 
   // Set support surface as table2.
-  group.setSupportSurfaceName("table2");
+  group.setSupportSurfaceName("table");
   // Call place to place the object using the place locations given.
   group.place("rice1", place_location);
   // END_SUB_TUTORIAL
@@ -214,11 +216,18 @@ int main(int argc, char** argv)
   // Wait a bit for ROS things to initialize
   ros::WallDuration(1.0).sleep();
 
+  ROS_INFO("starting pick");
   pick(group);
+  ROS_INFO("finished pick");
 
   ros::WallDuration(1.0).sleep();
 
+  std::cout << "press Enter to continue" << std::endl;
+  std::cin.get();
+
+  ROS_INFO("starting place");
   place(group);
+  ROS_INFO("finished place");
 
   ros::waitForShutdown();
   return 0;
