@@ -1,0 +1,5 @@
+world_name: boxing_world
+
+plugins:
+- name: gui_server
+  type: ed_gui_server/gui_server
