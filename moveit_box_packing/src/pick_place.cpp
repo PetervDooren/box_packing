@@ -36,6 +36,7 @@
 
 // ROS
 #include <ros/ros.h>
+#include <std_srvs/Trigger.h>
 
 // MoveIt
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
@@ -95,13 +96,13 @@ void pick(moveit::planning_interface::MoveGroupInterface& move_group)
   // Make sure that when you set the grasp_pose, you are setting it to be the pose of the last link in
   // your manipulator which in this case would be `"panda_link8"` You will have to compensate for the
   // transform from `"panda_link8"` to the palm of the end effector.
-  grasps[0].grasp_pose.header.frame_id = "panda_link0";
+  grasps[0].grasp_pose.header.frame_id = "map";
   tf2::Quaternion orientation;
   orientation.setRPY(-tau / 4, -tau / 8, -tau / 4);
   grasps[0].grasp_pose.pose.orientation = tf2::toMsg(orientation);
-  grasps[0].grasp_pose.pose.position.x = 0.415;
-  grasps[0].grasp_pose.pose.position.y = 0;
-  grasps[0].grasp_pose.pose.position.z = 0.5;
+  grasps[0].grasp_pose.pose.position.x = 0.4;
+  grasps[0].grasp_pose.pose.position.y = 0.6;
+  grasps[0].grasp_pose.pose.position.z = 1.1;
 
   // Setting pre-grasp approach
   // ++++++++++++++++++++++++++
@@ -113,7 +114,7 @@ void pick(moveit::planning_interface::MoveGroupInterface& move_group)
   grasps[0].pre_grasp_approach.desired_distance = 0.115;
 
   // Setting post-grasp retreat
-  // ++++++++++++++++++++++++++
+  // ++++++++++++++++++++++++++89
   /* Defined with respect to frame_id */
   grasps[0].post_grasp_retreat.direction.header.frame_id = "panda_link0";
   /* Direction is set as positive z axis */
@@ -136,7 +137,7 @@ void pick(moveit::planning_interface::MoveGroupInterface& move_group)
   // Set support surface as table1.
   move_group.setSupportSurfaceName("table1");
   // Call pick to pick up the object using the grasps given
-  move_group.pick("object", grasps);
+  move_group.pick("rice1", grasps);
   // END_SUB_TUTORIAL
 }
 
@@ -189,71 +190,8 @@ void place(moveit::planning_interface::MoveGroupInterface& group)
   // Set support surface as table2.
   group.setSupportSurfaceName("table2");
   // Call place to place the object using the place locations given.
-  group.place("object", place_location);
+  group.place("rice1", place_location);
   // END_SUB_TUTORIAL
-}
-
-void addCollisionObjects(moveit::planning_interface::PlanningSceneInterface& planning_scene_interface)
-{
-  // BEGIN_SUB_TUTORIAL table1
-  //
-  // Creating Environment
-  // ^^^^^^^^^^^^^^^^^^^^
-  // Create vector to hold 3 collision objects.
-  std::vector<moveit_msgs::CollisionObject> collision_objects;
-  collision_objects.resize(3);
-
-  // Add the first table where the cube will originally be kept.
-  collision_objects[0].id = "table1";
-  collision_objects[0].header.frame_id = "panda_link0";
-
-  /* Define the primitive and its dimensions. */
-  collision_objects[0].primitives.resize(1);
-  collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
-  collision_objects[0].primitives[0].dimensions.resize(3);
-  collision_objects[0].primitives[0].dimensions[0] = 0.2;
-  collision_objects[0].primitives[0].dimensions[1] = 0.8;
-  collision_objects[0].primitives[0].dimensions[2] = 0.4;
-
-  /* Define the pose of the table. */
-  collision_objects[0].primitive_poses.resize(1);
-  collision_objects[0].primitive_poses[0].position.x = 0.5;
-  collision_objects[0].primitive_poses[0].position.y = 0;
-  collision_objects[0].primitive_poses[0].position.z = 0.2;
-  collision_objects[0].primitive_poses[0].orientation.w = 1.0;
-  // END_SUB_TUTORIAL
-
-  collision_objects[0].operation = collision_objects[0].ADD;
-
-  // BEGIN_SUB_TUTORIAL table2
-  // Add the second table where we will be placing the cube.
-  collision_objects[1].id = "table2";
-  collision_objects[1].header.frame_id = "panda_link0";
-
-  // BEGIN_SUB_TUTORIAL object
-  // Define the object that we will be manipulating
-  collision_objects[2].header.frame_id = "panda_link0";
-  collision_objects[2].id = "object";
-
-  /* Define the primitive and its dimensions. */
-  collision_objects[2].primitives.resize(1);
-  collision_objects[2].primitives[0].type = collision_objects[1].primitives[0].BOX;
-  collision_objects[2].primitives[0].dimensions.resize(3);
-  collision_objects[2].primitives[0].dimensions[0] = 0.13;
-  collision_objects[2].primitives[0].dimensions[1] = 0.06;
-  collision_objects[2].primitives[0].dimensions[2] = 0.2;
-
-  /* Define the pose of the object. */
-  collision_objects[2].primitive_poses.resize(1);
-  collision_objects[2].primitive_poses[0].position.x = 0.5;
-  collision_objects[2].primitive_poses[0].position.y = 0;
-  collision_objects[2].primitive_poses[0].position.z = 0.5;
-  collision_objects[2].primitive_poses[0].orientation.w = 1.0;
-  // END_SUB_TUTORIAL
-
-  collision_objects[2].operation = collision_objects[2].ADD;
-
-  planning_scene_interface.applyCollisionObjects(collision_objects);
 }
 
 int main(int argc, char** argv)
@@ -268,7 +206,10 @@ int main(int argc, char** argv)
   moveit::planning_interface::MoveGroupInterface group("panda_arm");
   group.setPlanningTime(45.0);
 
-  addCollisionObjects(planning_scene_interface);
+  // get collision environment from ED
+  ros::ServiceClient client = nh.serviceClient<std_srvs::Trigger>("ed/moveit_scene");
+  std_srvs::Trigger req;
+  client.call(req);
 
   // Wait a bit for ROS things to initialize
   ros::WallDuration(1.0).sleep();
