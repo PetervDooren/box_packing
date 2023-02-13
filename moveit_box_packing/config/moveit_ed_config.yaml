@@ -1,0 +1,11 @@
+world_name: boxing_world
+
+plugins:
+- name: gui_server
+  type: ed_gui_server/gui_server
+- name: moveit
+  type: ed_moveit/moveit
+- name: tf_publisher
+  type: ed/tf_publisher
+  parameters:
+    root_frame_id: map

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="config" default="moveit_ed_config.yaml"/>
+
+    <!-- World model -->
+    <node name="ed" pkg="ed" type="ed" output="log"/>
+
+    <!-- Configure world model -->
+    <node name="ed_configure" pkg="ed" type="configure" args="$(find moveit_box_packing)/config/$(arg config)" output="log"/>
+
+</launch>
