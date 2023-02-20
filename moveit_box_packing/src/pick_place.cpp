@@ -274,15 +274,15 @@ void place(moveit::planning_interface::MoveGroupInterface& group, ed_msgs::Entit
 
   // Setting place location pose
   // +++++++++++++++++++++++++++
-  place_location[0].place_pose.header.frame_id = "panda_link0";
+  place_location[0].place_pose.header.frame_id = "map";
   tf2::Quaternion orientation;
-  orientation.setRPY(0, 0, tau / 4);  // A quarter turn about the z-axis
+  orientation.setRPY(0.0, tau / 4, 0.0);
   place_location[0].place_pose.pose.orientation = tf2::toMsg(orientation);
 
   /* For place location, we set the value to the exact location of the center of the object. */
-  place_location[0].place_pose.pose.position.x = 0;
-  place_location[0].place_pose.pose.position.y = 0.4;
-  place_location[0].place_pose.pose.position.z = 0.2;
+  place_location[0].place_pose.pose.position.x = entity.pose.position.x - 0.0975;
+  place_location[0].place_pose.pose.position.y = entity.pose.position.y;
+  place_location[0].place_pose.pose.position.z = entity.pose.position.z + 0.1 + palm_offset;
 
   // Setting pre-place approach
   // ++++++++++++++++++++++++++
@@ -298,7 +298,7 @@ void place(moveit::planning_interface::MoveGroupInterface& group, ed_msgs::Entit
   /* Defined with respect to frame_id */
   place_location[0].post_place_retreat.direction.header.frame_id = "panda_link0";
   /* Direction is set as negative y axis */
-  place_location[0].post_place_retreat.direction.vector.y = -1.0;
+  place_location[0].post_place_retreat.direction.vector.z = 1.0;
   place_location[0].post_place_retreat.min_distance = 0.1;
   place_location[0].post_place_retreat.desired_distance = 0.25;
 
@@ -346,42 +346,27 @@ int main(int argc, char** argv)
   }
   ed_msgs::EntityInfo entity = srv.response.entities[0];
 
+  srv.request.id = "cardboard_box";
+  if (!ed_client.call(srv))
+  {
+    ROS_ERROR("cannot query entity cardboard_box");
+    return 1;
+  }
+  ed_msgs::EntityInfo place_entity = srv.response.entities[0];
+
   ROS_INFO("starting pick");
   pick(group, entity);
   ROS_INFO("finished pick");
 
-/*
   ros::WallDuration(1.0).sleep();
 
   std::cout << "press Enter to continue" << std::endl;
   std::cin.get();
 
   ROS_INFO("starting place");
-  place(group);
+  place(group, place_entity);
   ROS_INFO("finished place");
-*/
+
   ros::waitForShutdown();
   return 0;
 }
-
-// BEGIN_TUTORIAL
-// CALL_SUB_TUTORIAL table1
-// CALL_SUB_TUTORIAL table2
-// CALL_SUB_TUTORIAL object
-//
-// Pick Pipeline
-// ^^^^^^^^^^^^^
-// CALL_SUB_TUTORIAL pick1
-// openGripper function
-// """"""""""""""""""""
-// CALL_SUB_TUTORIAL open_gripper
-// CALL_SUB_TUTORIAL pick2
-// closedGripper function
-// """"""""""""""""""""""
-// CALL_SUB_TUTORIAL closed_gripper
-// CALL_SUB_TUTORIAL pick3
-//
-// Place Pipeline
-// ^^^^^^^^^^^^^^
-// CALL_SUB_TUTORIAL place
-// END_TUTORIAL
