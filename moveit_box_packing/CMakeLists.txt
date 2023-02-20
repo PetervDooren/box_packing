@@ -4,6 +4,7 @@ project(moveit_box_packing)
 
 find_package(catkin REQUIRED
     COMPONENTS
+    ed
     interactive_markers
     moveit_core
     moveit_ros_planning
@@ -42,6 +43,12 @@ include_directories(
 
 add_executable(pick_place_node src/pick_place.cpp)
 target_link_libraries(pick_place_node
+   ${catkin_LIBRARIES}
+   ${Boost_LIBRARIES}
+)
+
+add_executable(motion_planning_test src/motion_planning_api_tutorial.cpp)
+target_link_libraries(motion_planning_test
    ${catkin_LIBRARIES}
    ${Boost_LIBRARIES}
 )
