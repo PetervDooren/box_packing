@@ -44,6 +44,10 @@
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 
+// ED
+#include <ed_msgs/SimpleQuery.h>
+#include <ed_msgs/EntityInfo.h>
+
 // TF2
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
@@ -84,56 +88,117 @@ void closedGripper(trajectory_msgs::JointTrajectory& posture)
   // END_SUB_TUTORIAL
 }
 
-void pick(moveit::planning_interface::MoveGroupInterface& move_group)
+void pick(moveit::planning_interface::MoveGroupInterface& move_group, const ed_msgs::EntityInfo& entity)
 {
   // BEGIN_SUB_TUTORIAL pick1
   // Create a vector of grasps to be attempted, currently only creating single grasp.
   // This is essentially useful when using a grasp generator to generate and test multiple grasps.
   std::vector<moveit_msgs::Grasp> grasps;
-  grasps.resize(1);
+  
+  // Get entity info
+  geometry_msgs::Pose entity_pose = entity.pose;
 
-  // Setting grasp pose
-  // ++++++++++++++++++++++
-  // This is the pose of panda_link8. |br|
-  // Make sure that when you set the grasp_pose, you are setting it to be the pose of the last link in
-  // your manipulator which in this case would be `"panda_link8"` You will have to compensate for the
-  // transform from `"panda_link8"` to the palm of the end effector.
-  grasps[0].grasp_pose.header.frame_id = "map";
-  tf2::Quaternion orientation;
-  orientation.setRPY(-tau / 4, -tau / 8, -tau / 4);
-  grasps[0].grasp_pose.pose.orientation = tf2::toMsg(orientation);
-  grasps[0].grasp_pose.pose.position.x = 0.3;
-  grasps[0].grasp_pose.pose.position.y = 0.6;
-  grasps[0].grasp_pose.pose.position.z = 1.1;
+  double palm_offset = 0.1;
 
-  // Setting pre-grasp approach
-  // ++++++++++++++++++++++++++
-  /* Defined with respect to frame_id */
-  grasps[0].pre_grasp_approach.direction.header.frame_id = "panda_link0";
-  /* Direction is set as positive x axis */
-  grasps[0].pre_grasp_approach.direction.vector.x = 1.0;
-  grasps[0].pre_grasp_approach.min_distance = 0.095;
-  grasps[0].pre_grasp_approach.desired_distance = 0.115;
+  // Setting grasp poses
+  // Step 1, near side of box
+  double dx = 0.01; // m
 
-  // Setting post-grasp retreat
-  // ++++++++++++++++++++++++++89
-  /* Defined with respect to frame_id */
-  grasps[0].post_grasp_retreat.direction.header.frame_id = "panda_link0";
-  /* Direction is set as positive z axis */
-  grasps[0].post_grasp_retreat.direction.vector.z = 1.0;
-  grasps[0].post_grasp_retreat.min_distance = 0.1;
-  grasps[0].post_grasp_retreat.desired_distance = 0.25;
+  
+  for (int i = 0; i < 19; i++)
+  {
+    moveit_msgs::Grasp grasp;
+    // ++++++++++++++++++++++
+    // This is the pose of panda_link8. |br|
+    // Make sure that when you set the grasp_pose, you are setting it to be the pose of the last link in
+    // your manipulator which in this case would be `"panda_link8"` You will have to compensate for the
+    // transform from `"panda_link8"` to the palm of the end effector.
+    grasp.grasp_pose.header.frame_id = "map";
+    tf2::Quaternion orientation;
+    orientation.setRPY(-tau / 4, -tau / 8, -tau / 4);
+    grasp.grasp_pose.pose.orientation = tf2::toMsg(orientation);
+    grasp.grasp_pose.pose.position.x = entity.pose.position.x - 0.065 - palm_offset;
+    grasp.grasp_pose.pose.position.y = entity.pose.position.y;
+    grasp.grasp_pose.pose.position.z = entity.pose.position.z + i*dx;
 
-  // Setting posture of eef before grasp
-  // +++++++++++++++++++++++++++++++++++
-  openGripper(grasps[0].pre_grasp_posture);
-  // END_SUB_TUTORIAL
+    // Setting pre-grasp approach
+    // ++++++++++++++++++++++++++
+    // Defined with respect to frame_id 
+    grasp.pre_grasp_approach.direction.header.frame_id = "panda_link8";
+    // Direction is set as positive x axis
+    grasp.pre_grasp_approach.direction.vector.z = 1.0;
+    grasp.pre_grasp_approach.min_distance = 0.095;
+    grasp.pre_grasp_approach.desired_distance = 0.115;
 
-  // BEGIN_SUB_TUTORIAL pick2
-  // Setting posture of eef during grasp
-  // +++++++++++++++++++++++++++++++++++
-  closedGripper(grasps[0].grasp_posture);
-  // END_SUB_TUTORIAL
+    // Setting post-grasp retreat
+    // ++++++++++++++++++++++++++89
+    // Defined with respect to frame_id 
+    grasp.post_grasp_retreat.direction.header.frame_id = "panda_link0";
+    // Direction is set as positive z axis
+    grasp.post_grasp_retreat.direction.vector.z = 1.0;
+    grasp.post_grasp_retreat.min_distance = 0.1;
+    grasp.post_grasp_retreat.desired_distance = 0.25;
+  
+    // Setting posture of eef before grasp
+    // +++++++++++++++++++++++++++++++++++
+    openGripper(grasp.pre_grasp_posture);
+    // END_SUB_TUTORIAL
+
+    // BEGIN_SUB_TUTORIAL pick2
+    // Setting posture of eef during grasp
+    // +++++++++++++++++++++++++++++++++++
+    closedGripper(grasp.grasp_posture);
+    // END_SUB_TUTORIAL
+    grasps.push_back(grasp);
+  }
+
+  // Step 2, top of box
+  for (int i = 0; i < 13; i++)
+  {
+    moveit_msgs::Grasp grasp;
+    // ++++++++++++++++++++++
+    // This is the pose of panda_link8. |br|
+    // Make sure that when you set the grasp_pose, you are setting it to be the pose of the last link in
+    // your manipulator which in this case would be `"panda_link8"` You will have to compensate for the
+    // transform from `"panda_link8"` to the palm of the end effector.
+    grasp.grasp_pose.header.frame_id = "map";
+    tf2::Quaternion orientation;
+    orientation.setRPY(tau / 2, 0.0, -tau / 8);
+    grasp.grasp_pose.pose.orientation = tf2::toMsg(orientation);
+    grasp.grasp_pose.pose.position.x = entity.pose.position.x - 0.065 + i*dx;
+    grasp.grasp_pose.pose.position.y = entity.pose.position.y;
+    grasp.grasp_pose.pose.position.z = entity.pose.position.z + 0.195 + palm_offset;
+
+    // Setting pre-grasp approach
+    // ++++++++++++++++++++++++++
+    /* Defined with respect to frame_id */
+    grasp.pre_grasp_approach.direction.header.frame_id = "panda_link8";
+    /* Direction is set as positive x axis */
+    grasp.pre_grasp_approach.direction.vector.z = 1.0;
+    grasp.pre_grasp_approach.min_distance = 0.095;
+    grasp.pre_grasp_approach.desired_distance = 0.115;
+
+    // Setting post-grasp retreat
+    // ++++++++++++++++++++++++++89
+    /* Defined with respect to frame_id */
+    grasp.post_grasp_retreat.direction.header.frame_id = "panda_link0";
+    /* Direction is set as positive z axis */
+    grasp.post_grasp_retreat.direction.vector.z = 1.0;
+    grasp.post_grasp_retreat.min_distance = 0.1;
+    grasp.post_grasp_retreat.desired_distance = 0.25;
+  
+    // Setting posture of eef before grasp
+    // +++++++++++++++++++++++++++++++++++
+    openGripper(grasp.pre_grasp_posture);
+    // END_SUB_TUTORIAL
+
+    // BEGIN_SUB_TUTORIAL pick2
+    // Setting posture of eef during grasp
+    // +++++++++++++++++++++++++++++++++++
+    closedGripper(grasp.grasp_posture);
+    // END_SUB_TUTORIAL
+    grasps.push_back(grasp);
+  }
 
   // BEGIN_SUB_TUTORIAL pick3
   // Set support surface as table1.
@@ -209,17 +274,30 @@ int main(int argc, char** argv)
   group.setPlanningTime(45.0);
 
   // get collision environment from ED
-  ros::ServiceClient client = nh.serviceClient<std_srvs::Trigger>("ed/moveit_scene");
+  ros::ServiceClient ed_scene_client = nh.serviceClient<std_srvs::Trigger>("ed/moveit_scene");
   std_srvs::Trigger req;
-  client.call(req);
+  ed_scene_client.call(req);
 
   // Wait a bit for ROS things to initialize
   ros::WallDuration(1.0).sleep();
 
+  // get ED entity to grab
+  ros::ServiceClient ed_client = nh.serviceClient<ed_msgs::SimpleQuery>("ed/simple_query");
+  ed_msgs::SimpleQuery srv;
+  srv.request.id = "rice1";
+  srv.request.radius = 100;
+  if (!ed_client.call(srv))
+  {
+    ROS_ERROR("cannot query entity rice1");
+    return 1;
+  }
+  ed_msgs::EntityInfo entity = srv.response.entities[0];
+
   ROS_INFO("starting pick");
-  pick(group);
+  pick(group, entity);
   ROS_INFO("finished pick");
 
+/*
   ros::WallDuration(1.0).sleep();
 
   std::cout << "press Enter to continue" << std::endl;
@@ -228,7 +306,7 @@ int main(int argc, char** argv)
   ROS_INFO("starting place");
   place(group);
   ROS_INFO("finished place");
-
+*/
   ros::waitForShutdown();
   return 0;
 }
