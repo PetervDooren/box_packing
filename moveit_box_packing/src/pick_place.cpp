@@ -171,18 +171,66 @@ void pick(moveit::planning_interface::MoveGroupInterface& move_group, const ed_m
 
     // Setting pre-grasp approach
     // ++++++++++++++++++++++++++
-    /* Defined with respect to frame_id */
+    // Defined with respect to frame_id
     grasp.pre_grasp_approach.direction.header.frame_id = "panda_link8";
-    /* Direction is set as positive x axis */
+    // Direction is set as positive x axis
     grasp.pre_grasp_approach.direction.vector.z = 1.0;
     grasp.pre_grasp_approach.min_distance = 0.095;
     grasp.pre_grasp_approach.desired_distance = 0.115;
 
     // Setting post-grasp retreat
     // ++++++++++++++++++++++++++89
-    /* Defined with respect to frame_id */
+    // Defined with respect to frame_id
     grasp.post_grasp_retreat.direction.header.frame_id = "panda_link0";
-    /* Direction is set as positive z axis */
+    // Direction is set as positive z axis
+    grasp.post_grasp_retreat.direction.vector.z = 1.0;
+    grasp.post_grasp_retreat.min_distance = 0.1;
+    grasp.post_grasp_retreat.desired_distance = 0.25;
+
+    // Setting posture of eef before grasp
+    // +++++++++++++++++++++++++++++++++++
+    openGripper(grasp.pre_grasp_posture);
+    // END_SUB_TUTORIAL
+
+    // BEGIN_SUB_TUTORIAL pick2
+    // Setting posture of eef during grasp
+    // +++++++++++++++++++++++++++++++++++
+    closedGripper(grasp.grasp_posture);
+    // END_SUB_TUTORIAL
+    grasps.push_back(grasp);
+  }
+
+  // step 3 back of box
+  for (int i = 0; i < 19; i++)
+  {
+    moveit_msgs::Grasp grasp;
+    // ++++++++++++++++++++++
+    // This is the pose of panda_link8. |br|
+    // Make sure that when you set the grasp_pose, you are setting it to be the pose of the last link in
+    // your manipulator which in this case would be `"panda_link8"` You will have to compensate for the
+    // transform from `"panda_link8"` to the palm of the end effector.
+    grasp.grasp_pose.header.frame_id = "map";
+    tf2::Quaternion orientation;
+    orientation.setRPY(-tau / 4, -tau / 8, tau / 4);
+    grasp.grasp_pose.pose.orientation = tf2::toMsg(orientation);
+    grasp.grasp_pose.pose.position.x = entity.pose.position.x + 0.065 + palm_offset;
+    grasp.grasp_pose.pose.position.y = entity.pose.position.y;
+    grasp.grasp_pose.pose.position.z = entity.pose.position.z + i*dx;
+
+    // Setting pre-grasp approach
+    // ++++++++++++++++++++++++++
+    // Defined with respect to frame_id
+    grasp.pre_grasp_approach.direction.header.frame_id = "panda_link8";
+    // Direction is set as positive x axis
+    grasp.pre_grasp_approach.direction.vector.z = 1.0;
+    grasp.pre_grasp_approach.min_distance = 0.095;
+    grasp.pre_grasp_approach.desired_distance = 0.115;
+
+    // Setting post-grasp retreat
+    // ++++++++++++++++++++++++++89
+    // Defined with respect to frame_id
+    grasp.post_grasp_retreat.direction.header.frame_id = "panda_link0";
+    // Direction is set as positive z axis
     grasp.post_grasp_retreat.direction.vector.z = 1.0;
     grasp.post_grasp_retreat.min_distance = 0.1;
     grasp.post_grasp_retreat.desired_distance = 0.25;
@@ -208,8 +256,13 @@ void pick(moveit::planning_interface::MoveGroupInterface& move_group, const ed_m
   // END_SUB_TUTORIAL
 }
 
-void place(moveit::planning_interface::MoveGroupInterface& group)
+void place(moveit::planning_interface::MoveGroupInterface& group, ed_msgs::EntityInfo& entity)
 {
+  // Get entity info
+  geometry_msgs::Pose entity_pose = entity.pose;
+
+  double palm_offset = 0.1;
+
   // BEGIN_SUB_TUTORIAL place
   // TODO(@ridhwanluthra) - Calling place function may lead to "All supplied place locations failed. Retrying last
   // location in verbose mode." This is a known issue. |br|
