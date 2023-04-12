@@ -21,6 +21,16 @@
       </visual>
       <pose>0 0 0.0975 0 0 0</pose>
     </link>
+    <link name="wall1">
+      <virtual_volume name="wall1_vv">
+        <geometry>
+          <box>
+            <size>0.13 0.005 0.195</size>
+          </box>
+        </geometry>
+        <pose>0.0 -0.03 0.0975 0 0 0</pose>
+      </virtual_volume>
+    </link>
     <static>true</static>
   </model>
 </sdf>

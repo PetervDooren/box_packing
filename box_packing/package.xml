@@ -8,4 +8,5 @@
     <license>BSD</license>
 
     <buildtool_depend>catkin</buildtool_depend>
+    <depend>ed_python</depend>
 </package>
