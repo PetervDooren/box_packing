@@ -91,7 +91,7 @@ def main():
     rospy.init_node("goddammit")
     rospy.loginfo("starting thing")
     wm = ed.world_model.WM()
-    r = rospy.Rate(1)
+    r = rospy.Rate(10)
 
     topic = 'visualization_marker_array'
     marker_publisher = rospy.Publisher(topic, MarkerArray)
@@ -130,8 +130,8 @@ def main():
         range1 = [-box_length/2 + buffer, box_length/2 - buffer]
         range2 = [-box_width/2 + buffer, box_width/2 - buffer]
 
-        K = 1.0
-        dy_max = 1.0
+        K = 5.0
+        dy_max = 0.5
         dy1 = getConstraintVel(c1, range1, K, dy_max)
         dy2 = getConstraintVel(c2, range2, K, dy_max)
         dy = [dy1, dy2]
