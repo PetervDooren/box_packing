@@ -151,6 +151,8 @@ def main():
             marker = createMarker(i, ee_pose, c*normal, constraint_met)
             markerArray.markers.append(marker)
 
+            if constraint_met:
+                continue
             K = 5.0 # treating all constraints equal for now
             dy_max = 0.5
             dyi = getConstraintVel(c, constraint_ranges[i], K, dy_max)
@@ -161,10 +163,12 @@ def main():
         rospy.loginfo(f"constraint velocities: {dy}")        
         rospy.loginfo(f"interaction matrix: {M}")
 
-        Minv = numpy.linalg.pinv(M)
-        rospy.loginfo(f"pseudo inverse interaction matrix: {Minv}")
-
-        dp = numpy.matmul(Minv, dy)
+        if M:
+            Minv = numpy.linalg.pinv(M)
+            rospy.loginfo(f"pseudo inverse interaction matrix: {Minv}")
+            dp = numpy.matmul(Minv, dy)
+        else:
+            dp = [0, 0, 0]
         rospy.loginfo(f"control velocity: {dp}")
         
         cmd_vel = Twist()
