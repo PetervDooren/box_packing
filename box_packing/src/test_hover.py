@@ -1,11 +1,91 @@
 import ed
 import rospy
+import numpy
 import tf2_ros
 import tf_conversions.posemath as pm
-from PyKDL import Frame, Vector, dot
+from PyKDL import Frame, Vector, Rotation, dot
 from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Point, Twist
 
+"""
+get the value of a relative position constraint and its direction in world frame.
+
+:param ref_pose: pose expressed in world frame
+:param pose2: pose that should be compared to ref_pose, expressed in world frame
+:param direction: direction along which the poses should be compared. expressed relative to ref_pose
+
+returns Tuple of the relative distance along the direction and the direction in world frame.
+"""
+def getRelPosition(ref_pose, pose2, direction):
+
+    # difference Vector
+    dpos = ref_pose.p - pose2.p
+    #rospy.loginfo(f"relative position {dpos}")
+    
+    # project distance on relevant axis (y axis of container in this case) #Note. cannot get an orientation from an ed.volume 
+    normal = ref_pose.M * direction # -normal = dC/dpee
+    c = dot(dpos, normal)
+
+    return c, normal
+
+"""
+Controller with dead zone to control a given constraint
+
+:param c: current value of the constraint
+:param range: desired range of the constraint in format [c_min, c_max]
+:param K: controller gain
+:dy_max: control saturation
+"""
+def getConstraintVel(c, range, K, dy_max):
+    if c < range[0]:
+        dy = K*(c - range[0])
+    elif c > range[1]:
+        dy = K*(c - range[1])
+    else: # c between range[0] and range[1]
+        dy = 0
+        return dy
+    return min(max(dy, -dy_max), dy_max)
+
+"""
+translate a tf transform into a pyKDL frame representing the same transform
+"""
+def tfToKDLFrame(transform):
+    position = Vector(transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z)
+    rotation = Rotation.Quaternion(transform.transform.rotation.x, 
+                                    transform.transform.rotation.y,
+                                    transform.transform.rotation.z,
+                                    transform.transform.rotation.w)
+    return Frame(rotation, position)
+
+def createMarker(id, origin, vector):
+    marker = Marker() 
+    marker.id = id
+    marker.lifetime = rospy.Duration()
+    marker.header.frame_id = "map"
+    marker.type = Marker.ARROW 
+    marker.action = Marker.ADD 
+    marker.scale.x = 0.02
+    marker.scale.y = 0.04
+    marker.color.a = 1.0
+    marker.color.b = 1.0
+    marker.pose.orientation.w=1.0 
+    marker.pose.position.x = origin.p.x() 
+    marker.pose.position.y = origin.p.y()
+    marker.pose.position.z = origin.p.z()
+    marker.points=[]
+    # start point
+    p1 = Point() 
+    p1.x = 0 
+    p1.y = 0 
+    p1.z = 0 
+    marker.points.append(p1)
+    # direction
+    p2 = Point() 
+    p2.x = vector.x() 
+    p2.y = vector.y()
+    p2.z = vector.z()
+    marker.points.append(p2)
+    return marker
 
 def main():
     rospy.init_node("goddammit")
@@ -34,73 +114,56 @@ def main():
             r.sleep()
             continue
         rospy.loginfo(f"tf {trans}")
-        ee_pose = Vector(trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z)
+        ee_pose = tfToKDLFrame(trans)
+
         rospy.loginfo(f"EE pose {ee_pose}")
 
-        # difference Vector
-        dpos = container.pose.frame.p - ee_pose
-        rospy.loginfo(f"relative position {dpos}")
+        c1, normal1 = getRelPosition(container.pose.frame, ee_pose, Vector(1, 0, 0))
+        c2, normal2 = getRelPosition(container.pose.frame, ee_pose, Vector(0, 1, 0))
 
-        # project distance on relevant axis (y axis of container in this case) #Note. cannot get an orientation from an ed.volume 
-        normal = container.pose.frame.M * Vector(0, 1, 0)
-        c = dot(dpos, normal)
+        rospy.loginfo(f"normal {normal1}, c {c1}")
 
-        rospy.loginfo(f"normal {normal}, c {c}")
+        # determine desired constraint velocity
+        box_length = 0.22 # x
+        box_width = 0.235 # y
+        buffer = 0.05
+        range1 = [-box_length/2 + buffer, box_length/2 - buffer]
+        range2 = [-box_width/2 + buffer, box_width/2 - buffer]
 
-        # display relative position:
-        markerArray = MarkerArray()
-        
-        marker2 = Marker() 
-        marker2.id = 1 
-        marker2.lifetime = rospy.Duration()
-        marker2.header.frame_id = "map"
-        marker2.type = Marker.ARROW 
-        marker2.action = Marker.ADD 
-        marker2.scale.x = 0.02
-        marker2.scale.y = 0.04
-        marker2.color.a = 1.0
-        marker2.color.b = 1.0
-        marker2.pose.orientation.w=1.0 
-        marker2.pose.position.x = ee_pose.x() 
-        marker2.pose.position.y = ee_pose.y()
-        marker2.pose.position.z = ee_pose.z()
-        marker2.points=[]
-        # start point
-        p1 = Point() 
-        p1.x = 0 
-        p1.y = 0 
-        p1.z = 0 
-        marker2.points.append(p1)
-        # direction
-        p2 = Point() 
-        p2.x = c* normal.x() 
-        p2.y = c* normal.y()
-        p2.z = c* normal.z()
-        marker2.points.append(p2) 
-        markerArray.markers.append(marker2) #add linestrip to markerArray
-
-        marker_publisher.publish(markerArray)
-
-        # command velocity:
-        # determine control velocity
-        box_width = 0.235 - 0.05 # buffer for good measure
         K = 1.0
-        v_max = 1.0
-        if c > box_width/2:
-            a = min(v_max, K*(c-box_width/2))
-        elif c < - box_width/2:
-            a = max(-v_max, K*(c+box_width/2))
-        else:
-            a = 0
+        dy_max = 1.0
+        dy1 = getConstraintVel(c1, range1, K, dy_max)
+        dy2 = getConstraintVel(c2, range2, K, dy_max)
+        dy = [dy1, dy2]
+        rospy.loginfo(f"constraint velocity: {dy}")
 
-        rospy.loginfo(f"control velocity: {a} m/s")
+        M = [[normal1.x(), normal1.y(), normal1.z()],
+            [normal2.x(), normal2.y(), normal2.z()]]
+        
+        rospy.loginfo(f"interaction matrix: {M}")
+
+        Minv = numpy.linalg.pinv(M)
+        rospy.loginfo(f"pseudo inverse interaction matrix: {Minv}")
+
+        dp = numpy.matmul(Minv, dy)
+        rospy.loginfo(f"control velocity: {dp}")
         
         cmd_vel = Twist()
-        cmd_vel.linear.x = a*normal.x()
-        cmd_vel.linear.y = a*normal.y()
-        cmd_vel.linear.z = a*normal.z()
+        cmd_vel.linear.x = dp[0]
+        cmd_vel.linear.y = dp[1]
+        cmd_vel.linear.z = dp[2]
 
         vel_publisher.publish(cmd_vel)
+
+        # display constraint:
+        markerArray = MarkerArray()
+        marker1 = createMarker(1, ee_pose, c1*normal1)
+        marker2 = createMarker(2, ee_pose, c2*normal2)
+        
+        markerArray.markers.append(marker1)
+        markerArray.markers.append(marker2)
+
+        marker_publisher.publish(markerArray)
           
         r.sleep()
 
