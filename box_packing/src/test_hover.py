@@ -118,28 +118,43 @@ def main():
 
         rospy.loginfo(f"EE pose {ee_pose}")
 
-        c1, normal1 = getRelPosition(container.pose.frame, ee_pose, Vector(1, 0, 0))
-        c2, normal2 = getRelPosition(container.pose.frame, ee_pose, Vector(0, 1, 0))
+        # define constraints
+        constraint_directions = [Vector(1, 0, 0),
+                                 Vector(0, 1, 0),
+                                 Vector(0, 0, 1)]
 
-        rospy.loginfo(f"normal {normal1}, c {c1}")
-
-        # determine desired constraint velocity
+        # ranges
         box_length = 0.22 # x
         box_width = 0.235 # y
+        box_height = 0.11 # z
         buffer = 0.05
-        range1 = [-box_length/2 + buffer, box_length/2 - buffer]
-        range2 = [-box_width/2 + buffer, box_width/2 - buffer]
+        constraint_ranges = [[-box_length/2 + buffer, box_length/2 - buffer], # x
+                             [-box_width/2 + buffer, box_width/2 - buffer], # y
+                             [box_height, 1.0]] # z
+        n_constraints = len(constraint_directions)
 
-        K = 5.0
-        dy_max = 0.5
-        dy1 = getConstraintVel(c1, range1, K, dy_max)
-        dy2 = getConstraintVel(c2, range2, K, dy_max)
-        dy = [dy1, dy2]
-        rospy.loginfo(f"constraint velocity: {dy}")
+        dy = []
+        M = []
 
-        M = [[normal1.x(), normal1.y(), normal1.z()],
-            [normal2.x(), normal2.y(), normal2.z()]]
-        
+        markerArray = MarkerArray()
+        # evaluate constraints
+        for i in range(n_constraints):
+            rospy.loginfo(f"evaluating constaint {i}")
+            c, normal = getRelPosition(container.pose.frame, ee_pose, constraint_directions[i])
+            rospy.loginfo(f"normal {normal}, c {c}")
+            
+            # visualization
+            marker = createMarker(i, ee_pose, c*normal)
+            markerArray.markers.append(marker)
+
+            K = 5.0 # treating all constraints equal for now
+            dy_max = 0.5
+            dyi = getConstraintVel(c, constraint_ranges[i], K, dy_max)
+            
+            dy.append(dyi)
+            M.append([normal.x(), normal.y(), normal.z()])
+
+        rospy.loginfo(f"constraint velocities: {dy}")        
         rospy.loginfo(f"interaction matrix: {M}")
 
         Minv = numpy.linalg.pinv(M)
@@ -156,12 +171,8 @@ def main():
         vel_publisher.publish(cmd_vel)
 
         # display constraint:
-        markerArray = MarkerArray()
-        marker1 = createMarker(1, ee_pose, c1*normal1)
-        marker2 = createMarker(2, ee_pose, c2*normal2)
         
-        markerArray.markers.append(marker1)
-        markerArray.markers.append(marker2)
+        
 
         marker_publisher.publish(markerArray)
           
