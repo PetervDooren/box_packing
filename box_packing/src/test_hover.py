@@ -23,7 +23,7 @@ def getRelPosition(ref_pose, pose2, direction):
     #rospy.loginfo(f"relative position {dpos}")
     
     # project distance on relevant axis (y axis of container in this case) #Note. cannot get an orientation from an ed.volume 
-    normal = ref_pose.M * direction # -normal = dC/dpee
+    normal = ref_pose.M * -direction # normal = dC/dpee
     c = dot(dpos, normal)
 
     return c, normal
