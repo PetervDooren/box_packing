@@ -57,7 +57,7 @@ def tfToKDLFrame(transform):
                                     transform.transform.rotation.w)
     return Frame(rotation, position)
 
-def createMarker(id, origin, vector):
+def createMarker(id, origin, vector, constraint_met=False):
     marker = Marker() 
     marker.id = id
     marker.lifetime = rospy.Duration()
@@ -67,7 +67,10 @@ def createMarker(id, origin, vector):
     marker.scale.x = 0.02
     marker.scale.y = 0.04
     marker.color.a = 1.0
-    marker.color.b = 1.0
+    if constraint_met:
+        marker.color.g = 1.0
+    else:
+        marker.color.r = 1.0
     marker.pose.orientation.w=1.0 
     marker.pose.position.x = origin.p.x() 
     marker.pose.position.y = origin.p.y()
@@ -144,7 +147,8 @@ def main():
             rospy.loginfo(f"normal {normal}, c {c}")
             
             # visualization
-            marker = createMarker(i, ee_pose, c*normal)
+            constraint_met = c > constraint_ranges[i][0] and c < constraint_ranges[i][1]
+            marker = createMarker(i, ee_pose, c*normal, constraint_met)
             markerArray.markers.append(marker)
 
             K = 5.0 # treating all constraints equal for now
