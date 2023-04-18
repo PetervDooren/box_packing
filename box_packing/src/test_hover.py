@@ -36,11 +36,11 @@ Controller with dead zone to control a given constraint
 :param K: controller gain
 :dy_max: control saturation
 """
-def getConstraintVel(c, range, K, dy_max):
+def getConstraintVel(c, range, K, dy_max, dy_min=0):
     if c < range[0]:
-        dy = K*(c - range[0])
+        dy = K*(c - range[0]) - dy_min
     elif c > range[1]:
-        dy = K*(c - range[1])
+        dy = K*(c - range[1]) + dy_min
     else: # c between range[0] and range[1]
         dy = 0
         return dy
@@ -164,7 +164,8 @@ def main():
                 continue
             K = 5.0 # treating all constraints equal for now
             dy_max = 0.5
-            dyi = getConstraintVel(c, constraint_ranges[i], K, dy_max)
+            dy_min = 0.1 # feedforward velocity to overcome friction
+            dyi = getConstraintVel(c, constraint_ranges[i], K, dy_max, dy_min)
             
             dy.append(dyi)
             M.append([normal.x(), normal.y(), normal.z()])
