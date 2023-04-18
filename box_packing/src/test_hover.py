@@ -153,7 +153,7 @@ def main():
                 return
             rospy.loginfo(f"evaluating constaint {i}")
             c, normal = getRelPosition(container.pose.frame, ee_pose, constraint_directions[i])
-            rospy.loginfo(f"normal {normal}, c {c}")
+            #rospy.loginfo(f"normal {normal}, c {c}")
             
             # visualization
             constraint_met = c > constraint_ranges[i][0] and c < constraint_ranges[i][1]
@@ -169,18 +169,22 @@ def main():
             dy.append(dyi)
             M.append([normal.x(), normal.y(), normal.z()])
 
-        rospy.loginfo(f"constraint velocities: {dy}")        
-        rospy.loginfo(f"interaction matrix: {M}")
+        #rospy.loginfo(f"constraint velocities: {dy}")        
+        #rospy.loginfo(f"interaction matrix: {M}")
 
         if M:
             Minv = numpy.linalg.pinv(M)
-            rospy.loginfo(f"pseudo inverse interaction matrix: {Minv}")
+            #rospy.loginfo(f"pseudo inverse interaction matrix: {Minv}")
             dp = numpy.matmul(Minv, dy)
         else:
             # all constraints are met. continue to next step
-            current_step += 1
-            rospy.loginfo(f"All constraints met, continuing to step: {current_step}")
-            continue
+            if current_step <= len(plan):
+                current_step += 1
+                rospy.loginfo(f"All constraints met, continuing to step: {current_step}")
+                continue
+            else:
+                rospy.loginfo(f"Final step completed, maintaining constraints of step: {current_step}")
+                dp = [0, 0, 0]
         rospy.loginfo(f"control velocity: {dp}")
         
         cmd_vel = Twist()
