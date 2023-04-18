@@ -181,7 +181,7 @@ def main():
             dp = numpy.matmul(Minv, dy)
         else:
             # all constraints are met. continue to next step
-            if current_step <= len(plan):
+            if current_step+1 < len(plan):
                 current_step += 1
                 rospy.loginfo(f"All constraints met, continuing to step: {current_step}")
                 continue
