@@ -129,7 +129,7 @@ def main():
         container = wm.get_entity("cardboard_box")
         product = wm.get_entity("rice1")
 
-        rospy.loginfo(f"container {container}, product {product}")
+        #rospy.loginfo(f"container {container}, product {product}")
 
         # get ee pose
         try:
@@ -146,6 +146,7 @@ def main():
         M = []
 
         markerArray = MarkerArray()
+        marker_id = 0
         # evaluate constraints
         for i in plan[current_step]:
             if i >= n_constraints:
@@ -157,8 +158,9 @@ def main():
             
             # visualization
             constraint_met = c > constraint_ranges[i][0] and c < constraint_ranges[i][1]
-            marker = createMarker(i, ee_pose, c*normal, constraint_met)
+            marker = createMarker(marker_id, ee_pose, c*normal, constraint_met)
             markerArray.markers.append(marker)
+            marker_id += 1 # TODO does not remove markers if we use less constraints than before.
 
             if constraint_met:
                 continue
