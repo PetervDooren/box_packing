@@ -104,6 +104,27 @@ def main():
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
 
+    # define constraints
+    constraint_directions = [Vector(1, 0, 0),
+                                Vector(0, 1, 0),
+                                Vector(0, 0, 1),
+                                Vector(0, 0, 1)]
+
+    # ranges
+    box_length = 0.22 # x
+    box_width = 0.235 # y
+    box_height = 0.11 # z
+    buffer = 0.05
+    constraint_ranges = [[-box_length/2 + buffer, box_length/2 - buffer], # x
+                            [-box_width/2 + buffer, box_width/2 - buffer], # y
+                            [box_height, 1.0], # z
+                            [0.0, box_height]] # z
+    n_constraints = len(constraint_directions)
+
+    plan = [[0, 1, 2],
+            [0, 1, 3]]
+    current_step = 0
+
     while not rospy.is_shutdown():
         container = wm.get_entity("cardboard_box")
         product = wm.get_entity("rice1")
@@ -120,27 +141,6 @@ def main():
         ee_pose = tfToKDLFrame(trans)
 
         rospy.loginfo(f"EE pose {ee_pose}")
-
-        # define constraints
-        constraint_directions = [Vector(1, 0, 0),
-                                 Vector(0, 1, 0),
-                                 Vector(0, 0, 1),
-                                 Vector(0, 0, 1)]
-
-        # ranges
-        box_length = 0.22 # x
-        box_width = 0.235 # y
-        box_height = 0.11 # z
-        buffer = 0.05
-        constraint_ranges = [[-box_length/2 + buffer, box_length/2 - buffer], # x
-                             [-box_width/2 + buffer, box_width/2 - buffer], # y
-                             [box_height, 1.0], # z
-                             [0.0, box_height]] # z
-        n_constraints = len(constraint_directions)
-
-        plan = [[0, 1, 2],
-                [0, 1, 3]]
-        current_step = 0
 
         dy = []
         M = []
