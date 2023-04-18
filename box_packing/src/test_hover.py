@@ -124,6 +124,7 @@ def main():
         # define constraints
         constraint_directions = [Vector(1, 0, 0),
                                  Vector(0, 1, 0),
+                                 Vector(0, 0, 1),
                                  Vector(0, 0, 1)]
 
         # ranges
@@ -133,15 +134,23 @@ def main():
         buffer = 0.05
         constraint_ranges = [[-box_length/2 + buffer, box_length/2 - buffer], # x
                              [-box_width/2 + buffer, box_width/2 - buffer], # y
-                             [box_height, 1.0]] # z
+                             [box_height, 1.0], # z
+                             [0.0, box_height]] # z
         n_constraints = len(constraint_directions)
+
+        plan = [[0, 1, 2],
+                [0, 1, 3]]
+        current_step = 0
 
         dy = []
         M = []
 
         markerArray = MarkerArray()
         # evaluate constraints
-        for i in range(n_constraints):
+        for i in plan[current_step]:
+            if i >= n_constraints:
+                rospy.logerr(f"constraint {i} requested but only {n_constraints} defined")
+                return
             rospy.loginfo(f"evaluating constaint {i}")
             c, normal = getRelPosition(container.pose.frame, ee_pose, constraint_directions[i])
             rospy.loginfo(f"normal {normal}, c {c}")
@@ -168,7 +177,10 @@ def main():
             rospy.loginfo(f"pseudo inverse interaction matrix: {Minv}")
             dp = numpy.matmul(Minv, dy)
         else:
-            dp = [0, 0, 0]
+            # all constraints are met. continue to next step
+            current_step += 1
+            rospy.loginfo(f"All constraints met, continuing to step: {current_step}")
+            continue
         rospy.loginfo(f"control velocity: {dp}")
         
         cmd_vel = Twist()
