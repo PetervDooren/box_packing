@@ -1,6 +1,6 @@
 import ed
 import rospy
-from pykdl_ros import FrameStamped
+from PyKDL import Rotation
 from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Point
 
@@ -63,6 +63,7 @@ if __name__=="__main__":
     rospy.sleep(1)
     entity = wm.get_entity(entity_id)
     posestamped = entity.pose
+    _, _, yaw = posestamped.frame.M.GetRPY()
     status = 0
 
     try:
@@ -76,6 +77,8 @@ if __name__=="__main__":
 
                 posestamped.frame.p.x(posestamped.frame.p.x() + dx)
                 posestamped.frame.p.y(posestamped.frame.p.y() + dy)
+                yaw += dth
+                posestamped.frame.M = Rotation.RPY(0,0,yaw)
                 posestamped.header.stamp = rospy.Time(0)
                 rospy.loginfo(f"new pose: {posestamped}")
                 wm.update_entity(entity_id, frame_stamped=posestamped)
