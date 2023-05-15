@@ -95,8 +95,31 @@ def MoveToMiddleOver(vmax):
     return vel
 
 """
+MoveInto: give a velocity into the box. In this usecase, always down.
+implements the concept MoveInto(CONTAINER)
+
+@return double[3] containing [velocity_x, velocity_y, velocity_z]
+"""
+def MoveInto():
+    return [0, 0, -0.2]
+
+
+"""
+MoveInto: give a velocity into the side of the box. In this usecase, we always move in the y direction of the box.
+implements the concept MoveAgainst( Side( CONTAINER))
+
+#TODO take the orientation of the box into account
+
+@return double[3] containing [velocity_x, velocity_y, velocity_z]
+"""
+def MoveAgainst():
+    return [0, -0.2, 0.0]
+
+"""
 InRegionOver: calculate whether the box is fully within the over region of the container
 implements the concept of InRegion(BOX, Over(CONTAINER))
+
+#TODO take the orientation of the box into account
 
 @return true: box is within the region
 """
@@ -122,6 +145,14 @@ def InRegionOver():
         return False
     return True
 
+"""
+Contact: determine whether the robot has made contact with the environment.
+
+@return True: if contact is thought to have been made.
+"""
+def Contact():
+    return False
+
 
 class GuardedMotion:
     def __init__(self, motion, guard):
@@ -142,8 +173,8 @@ class GuardedMotion:
 class Plan:
     def __init__(self):
         self.guarded_motions = {"over": GuardedMotion(lambda: MoveToMiddleOver(vmax=1.0), lambda: InRegionOver()),
-                                "into": GuardedMotion(None, lambda: True),
-                                "against": GuardedMotion(None, lambda: True),
+                                "into": GuardedMotion(lambda: MoveInto(), lambda: Contact()),
+                                "against": GuardedMotion(None, lambda: Contact()),
                                 "align": GuardedMotion(None, lambda: False)}
         self.transitions = {"over" : "into",
                             "into" : "against",
