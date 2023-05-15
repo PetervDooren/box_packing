@@ -17,7 +17,8 @@
   <!-- Simulated robot-->
   <group unless="$(arg robot_real)">
     <include file="$(find tools)/launch/panda_sim.launch">
-        <arg name="world" value="$(find my_ed_object_models)/models/boxing_world/model.sdf"/>
+      <arg name="world" value="$(find my_ed_object_models)/models/boxing_world/model.sdf"/>
+      <arg name="controller" value = "my_controller"/>
       <arg name="x" value="-0.18"/>
       <arg name="y" value="0.49"/>
       <arg name="z" value="0.79"/>
