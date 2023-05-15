@@ -1,57 +1,226 @@
-from dataclasses import dataclass
-from enum import Enum
-
+import ed
 import rospy
+import numpy
+import tf2_ros
+import tf_conversions.posemath as pm
+from PyKDL import Frame, Vector, Rotation, dot
+from visualization_msgs.msg import MarkerArray, Marker
+from geometry_msgs.msg import Point, Twist
+
+# Global variables
+wm = None
+tfBuffer = None
+
+"""
+translate a tf transform into a pyKDL frame representing the same transform
+"""
+def tfToKDLFrame(transform):
+    position = Vector(transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z)
+    rotation = Rotation.Quaternion(transform.transform.rotation.x, 
+                                    transform.transform.rotation.y,
+                                    transform.transform.rotation.z,
+                                    transform.transform.rotation.w)
+    return Frame(rotation, position)
+
+def createMarker(id, origin, vector, constraint_met=False):
+    marker = Marker() 
+    marker.id = id
+    marker.lifetime = rospy.Duration()
+    marker.header.frame_id = "map"
+    marker.type = Marker.ARROW 
+    marker.action = Marker.ADD 
+    marker.scale.x = 0.02
+    marker.scale.y = 0.04
+    marker.color.a = 1.0
+    if constraint_met:
+        marker.color.g = 1.0
+    else:
+        marker.color.r = 1.0
+    marker.pose.orientation.w=1.0 
+    marker.pose.position.x = origin.p.x() 
+    marker.pose.position.y = origin.p.y()
+    marker.pose.position.z = origin.p.z()
+    marker.points=[]
+    # start point
+    p1 = Point() 
+    p1.x = 0 
+    p1.y = 0 
+    p1.z = 0 
+    marker.points.append(p1)
+    # direction
+    p2 = Point() 
+    p2.x = vector.x() 
+    p2.y = vector.y()
+    p2.z = vector.z()
+    marker.points.append(p2)
+    return marker
+
+def getBoxPose():
+    # get ee pose
+    try:
+        trans = tfBuffer.lookup_transform("map", 'panda_EE', rospy.Time(0))
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        return None
+    ee_pose = tfToKDLFrame(trans)
+    rospy.loginfo(f"ee_pose {ee_pose.p}")
+    return ee_pose
+
+def getContainer():
+    container = wm.get_entity("cardboard_box")
+    return container
+
+"""
+MoveToMiddleOver: calculate a velocity setpoint to move the end effector in the direction of over the box.
+implements the concept MoveTo( BOX, Middle ( Over(CONTAINER)))
+
+@return double[3] containing [velocity_x, velocity_y, velocity_z]
+"""
+def MoveToMiddleOver(vmax, vmin):   
+    container = getContainer()
+    ee_pose = getBoxPose()
+    if not container or not ee_pose:
+        rospy.logwarn(f"could not get object poses: container: {container}, ee_pose {ee_pose}")
+        return [0, 0, 0]
+    
+    dpos = container.pose.frame.p - ee_pose.p
+    # ignore height if high enough
+    # hardcoded dimensions for now
+    container_height = 0.11 # z
+    dpos.z( max(dpos.z() + container_height, 0) )
 
 
-# feature functions
-class Feature_function(Enum):
-    DISTANCE = 1
+    vel = dpos * 5.0
+    if vel.Norm() > vmax:
+        vel = vel*vmax/vel.Norm()
+    elif vel.Norm() < vmin:
+        vel = vel*vmin/vel.Norm()
+    return vel
 
-@dataclass
-class Constraint:
-    F1: int # ED reference uuid
-    F2: int
-    Ffunc: Enum
-    value_min: float
-    value_max: float
+"""
+InRegionOver: calculate whether the box is fully within the over region of the container
+implements the concept of InRegion(BOX, Over(CONTAINER))
 
-@dataclass
-class Position:
-    x: float
-    y: float
-    z: float
-        
-@dataclass
-class Box:
-    width: float # x
-    length: float # y
-    height: float # z
+@return true: box is within the region
+"""
+def InRegionOver():
+    container = getContainer()
+    ee_pose = getBoxPose()
+    if not container or not ee_pose:
+        rospy.logwarn(f"could not get object poses: container: {container}, ee_pose {ee_pose}")
+        return False
+
+    # hardcoded dimensions for now
+    container_length = 0.22 # x
+    container_width = 0.235 # y
+    container_height = 0.11 # z
+    buffer = 0.05
+
+    dpos = container.pose.frame.p - ee_pose.p
+    if abs(dpos.x()) > container_length/2:
+        return False
+    if abs(dpos.y()) > container_width/2:
+        return False
+    if dpos.z() < container_height:
+        return False
+    return True
+
+
+class GuardedMotion:
+    def __init__(self, motion, guard):
+        self.motion_func = motion
+        self.guard_func = guard
+
+    def motion(self):
+        if not self.motion_func:
+            return None
+        return self.motion_func()
+    
+    def guard(self):
+        if not self.guard_func:
+            rospy.logerr("No guard function provided to guarded motion")
+            return False
+        return self.guard_func()
+    
+class Plan:
+    def __init__(self):
+        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToMiddleOver(vmax=1.0, vmin=0.1), lambda: InRegionOver()),
+                                "into": GuardedMotion(None, lambda: True),
+                                "against": GuardedMotion(None, lambda: True),
+                                "align": GuardedMotion(None, lambda: False)}
+        self.transitions = {"over" : "into",
+                            "into" : "against",
+                            "against": "DONE"}
+        self.starting_motions = ["over", "align"]
 
 '''
 Box packing demo.
 
-goal: move an end effector using constraints.
-
-simplifying assumptions:
-- only distance constraints
-- hardcode worldmodel
+goal: Define a plan as guarded motions. then configure the motions
 
 '''
 def main():
+    rospy.init_node("goddammit")
+    rospy.loginfo("starting thing")
+    r = rospy.Rate(1)
 
-    # Define set of constraints
-    above_constraint = Constraint(1, 2, Feature_function.DISTANCE, 0, 100.0)
+    topic = 'visualization_marker_array'
+    marker_publisher = rospy.Publisher(topic, MarkerArray)
 
-    while not rospy.is_shutdown:
-        # filter active constraints
+    vel_publisher = rospy.Publisher('my_controller/velocity_reference', Twist)
 
-        # create interaction matrix M
+    global wm
+    wm = ed.world_model.WM()
+    global tfBuffer
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
 
-        # check M for conflicts
+    # define plan
+    plan = Plan()
+    active_motions = plan.starting_motions
 
-        # calculate inverse
+    loop_counter = 0
+    
+    while not rospy.is_shutdown():
+        v = [0,0,0]
 
-        # robot control law
+        rospy.loginfo(f"loop {loop_counter}, active motions {active_motions}")
+        
+        # execute motion
+        for m in active_motions:
+            guarded_motion = plan.guarded_motions[m]
+            velocity = guarded_motion.motion()
+            if velocity:
+                v = velocity
+                rospy.loginfo(f"control velocity: {velocity}")
+                break # we cannot yet combine motions
 
-        # send joint velocities
+        # update guards
+        activated_guards = []
+        for m in active_motions:
+            guarded_motion = plan.guarded_motions[m]
+            if guarded_motion.guard():
+                activated_guards.append(m)
+        
+        # apply transitions
+        for g in activated_guards:
+            active_motions.remove(g) # remove the original guarded motion.
+            new_gm = plan.transitions[g]
+            if new_gm:
+                active_motions.append(new_gm)
+                rospy.loginfo(f"guard of guarded_motion {g} triggered. making transition to {new_gm}")
+            else:
+                rospy.loginfo(f"guard of guarded_motion {g} triggered. No further transition available")
+
+        # communicate step
+        cmd_vel = Twist()
+        cmd_vel.linear.x = v[0]
+        cmd_vel.linear.y = v[1]
+        cmd_vel.linear.z = v[2]
+
+        vel_publisher.publish(cmd_vel)
+        r.sleep()
+
+    rospy.loginfo("Goodbye")
+
+if __name__ == '__main__':
+    main()
