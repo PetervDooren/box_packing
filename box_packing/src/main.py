@@ -159,7 +159,7 @@ goal: Define a plan as guarded motions. then configure the motions
 def main():
     rospy.init_node("goddammit")
     rospy.loginfo("starting thing")
-    r = rospy.Rate(1)
+    r = rospy.Rate(10)
 
     topic = 'visualization_marker_array'
     marker_publisher = rospy.Publisher(topic, MarkerArray)
@@ -176,12 +176,12 @@ def main():
     plan = Plan()
     active_motions = plan.starting_motions
 
-    loop_counter = 0
+    plan_done = False
     
-    while not rospy.is_shutdown():
+    while not rospy.is_shutdown() and not plan_done:
         v = [0,0,0]
 
-        rospy.loginfo(f"loop {loop_counter}, active motions {active_motions}")
+        rospy.loginfo(f"loop start, active motions {active_motions}")
         
         # execute motion
         for m in active_motions:
@@ -189,7 +189,7 @@ def main():
             velocity = guarded_motion.motion()
             if velocity:
                 v = velocity
-                rospy.loginfo(f"control velocity: {velocity}")
+                rospy.loginfo(f"control velocity: {velocity}, determined by motion {m}")
                 break # we cannot yet combine motions
 
         # update guards
@@ -203,6 +203,9 @@ def main():
         for g in activated_guards:
             active_motions.remove(g) # remove the original guarded motion.
             new_gm = plan.transitions[g]
+            if new_gm == "DONE":
+                plan_done = True
+                break
             if new_gm:
                 active_motions.append(new_gm)
                 rospy.loginfo(f"guard of guarded_motion {g} triggered. making transition to {new_gm}")
