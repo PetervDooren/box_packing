@@ -213,12 +213,24 @@ def main():
                 rospy.loginfo(f"guard of guarded_motion {g} triggered. No further transition available")
 
         # communicate step
+        # send command velocity
         cmd_vel = Twist()
         cmd_vel.linear.x = v[0]
         cmd_vel.linear.y = v[1]
         cmd_vel.linear.z = v[2]
 
         vel_publisher.publish(cmd_vel)
+
+        # display velocity
+
+        ee_pose = getBoxPose()
+        if ee_pose:
+            velocity_vector = Vector(v[0], v[1], v[2])
+            marker = createMarker(0, ee_pose, velocity_vector, True)
+            markerArray = MarkerArray()
+            markerArray.markers.append(marker)
+            marker_publisher.publish(markerArray)
+
         r.sleep()
 
     rospy.loginfo("Goodbye")
