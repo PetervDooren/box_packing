@@ -118,7 +118,7 @@ def InRegionOver():
         return False
     if abs(dpos.y()) > container_width/2:
         return False
-    if dpos.z() < container_height:
+    if dpos.z() > -container_height:
         return False
     return True
 
