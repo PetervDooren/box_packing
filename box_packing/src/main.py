@@ -75,7 +75,7 @@ implements the concept MoveTo( BOX, Middle ( Over(CONTAINER)))
 
 @return double[3] containing [velocity_x, velocity_y, velocity_z]
 """
-def MoveToMiddleOver(vmax, vmin):   
+def MoveToMiddleOver(vmax):   
     container = getContainer()
     ee_pose = getBoxPose()
     if not container or not ee_pose:
@@ -92,8 +92,6 @@ def MoveToMiddleOver(vmax, vmin):
     vel = dpos * 5.0
     if vel.Norm() > vmax:
         vel = vel*vmax/vel.Norm()
-    elif vel.Norm() < vmin:
-        vel = vel*vmin/vel.Norm()
     return vel
 
 """
@@ -143,7 +141,7 @@ class GuardedMotion:
     
 class Plan:
     def __init__(self):
-        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToMiddleOver(vmax=1.0, vmin=0.1), lambda: InRegionOver()),
+        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToMiddleOver(vmax=1.0), lambda: InRegionOver()),
                                 "into": GuardedMotion(None, lambda: True),
                                 "against": GuardedMotion(None, lambda: True),
                                 "align": GuardedMotion(None, lambda: False)}
