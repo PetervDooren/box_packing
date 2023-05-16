@@ -110,18 +110,22 @@ def MoveInto():
 MoveInto: give a velocity into the side of the box. In this usecase, we always move in the y direction of the box.
 implements the concept MoveAgainst( Side( CONTAINER))
 
-#TODO take the orientation of the box into account
-
 @return double[3] containing [velocity_x, velocity_y, velocity_z]
 """
 def MoveAgainst():
-    return [0, -0.2, 0.0]
+    container = getContainer()
+    if not container:
+        rospy.logwarn(f"could not get object poses: container: {container}")
+        return False
+    # get the coordinates of dpos in the frame of the container
+    y_container_map = container.pose.frame.M * Vector(0, 1, 0)
+
+    velocity = 0.2*[y_container_map.x, y_container_map.y, y_container_map.z]
+    return velocity
 
 """
 InRegionOver: calculate whether the box is fully within the over region of the container
 implements the concept of InRegion(BOX, Over(CONTAINER))
-
-#TODO take the orientation of the box into account
 
 @return true: box is within the region
 """
@@ -138,12 +142,22 @@ def InRegionOver():
     container_height = 0.11 # z
     buffer = 0.05
 
+    # pose of the container with respect to the end effector
     dpos = container.pose.frame.p - ee_pose.p
-    if abs(dpos.x()) > container_length/2:
+
+    # get the coordinates of dpos in the frame of the container
+    x_container_map = container.pose.frame.M * Vector(1, 0, 0)
+    y_container_map = container.pose.frame.M * Vector(0, 1, 0)
+    z_container_map = container.pose.frame.M * Vector(0, 0, 1)
+
+    dpos_x = dot(dpos, x_container_map)
+    dpos_y = dot(dpos, y_container_map)
+    dpos_z = dot(dpos, z_container_map)
+    if abs(dpos_x) > container_length/2:
         return False
-    if abs(dpos.y()) > container_width/2:
+    if abs(dpos_y) > container_width/2:
         return False
-    if dpos.z() > -container_height:
+    if dpos_z > -container_height:
         return False
     return True
 
