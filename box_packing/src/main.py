@@ -10,6 +10,8 @@ from geometry_msgs.msg import Point, Twist
 # Global variables
 wm = None
 tfBuffer = None
+measured_vel = None
+counter = 0
 
 """
 translate a tf transform into a pyKDL frame representing the same transform
@@ -151,6 +153,20 @@ Contact: determine whether the robot has made contact with the environment.
 @return True: if contact is thought to have been made.
 """
 def Contact():
+    global counter
+    global measured_vel
+
+    if not measured_vel:
+        return False
+    
+    if measured_vel.linear.z > -0.01:
+        counter += 1
+    else:
+        counter = 0
+    
+    if counter > 10:
+        counter = 0
+        return True
     return False
 
 
@@ -181,6 +197,10 @@ class Plan:
                             "against": "DONE"}
         self.starting_motions = ["over", "align"]
 
+def franka_callback(msg):
+    global measured_vel
+    measured_vel = msg
+
 '''
 Box packing demo.
 
@@ -202,6 +222,7 @@ def main():
     global tfBuffer
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
+    velocity_sub = rospy.Subscriber("my_controller/measured_velocity", Twist, franka_callback)
 
     # define plan
     plan = Plan()
