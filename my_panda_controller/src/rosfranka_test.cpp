@@ -77,6 +77,7 @@ namespace my_panda_controller {
         velocityController = VelocityController(model_handle_.get());
 
         velocity_reference_sub = node_handle.subscribe("velocity_reference", 1, &MyController::velocity_reference_callback, this);
+        velocity_pub = node_handle.advertise<geometry_msgs::Twist>("measured_velocity", 1);
         trigger_service_ = node_handle.advertiseService("trigger", &MyController::trigger_callback, this);
 
         return true;
@@ -88,9 +89,24 @@ namespace my_panda_controller {
 
     void MyController::update(const ros::Time& /* time */,
                                                 const ros::Duration& period) {
+        // calculate and publish ee velocity
+        franka::RobotState robot_state = state_handle_->getRobotState();
+        Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.dq.data());
+        Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(model_handle_->getZeroJacobian(franka::Frame::kEndEffector).data());
+
+        Eigen::Matrix<double, 6, 1> velocity = jacobian * dq;
+        geometry_msgs::Twist measured_velocity;
+        measured_velocity.linear.x = velocity[0];
+        measured_velocity.linear.y = velocity[1];
+        measured_velocity.linear.z = velocity[2];
+        measured_velocity.angular.x = velocity[3];
+        measured_velocity.angular.y = velocity[4];
+        measured_velocity.angular.z = velocity[5];
+        velocity_pub.publish(measured_velocity);
+
         if (active) {
             elapsed_time_ += period;
-            franka::RobotState robot_state = state_handle_->getRobotState();
+            //franka::RobotState robot_state = state_handle_->getRobotState();
 
             std::array<double, 7> tau_d_input = velocityController.controlLaw(robot_state, period, desired_velocity);
 

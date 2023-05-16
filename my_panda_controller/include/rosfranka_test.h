@@ -42,6 +42,9 @@ namespace my_panda_controller {
         ros::Subscriber velocity_reference_sub;
         void velocity_reference_callback(const geometry_msgs::Twist &msg);
 
+        //velocity publisher: needed for contact detection
+        ros::Publisher velocity_pub;
+
         bool active = false;
         ros::ServiceServer trigger_service_;
         bool trigger_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res);
