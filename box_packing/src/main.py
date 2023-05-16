@@ -188,7 +188,7 @@ class GuardedMotion:
     
 class Plan:
     def __init__(self):
-        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToMiddleOver(vmax=1.0), lambda: InRegionOver()),
+        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToMiddleOver(vmax=0.5), lambda: InRegionOver()),
                                 "into": GuardedMotion(lambda: MoveInto(), lambda: Contact()),
                                 "against": GuardedMotion(None, lambda: Contact()),
                                 "align": GuardedMotion(None, lambda: False)}
