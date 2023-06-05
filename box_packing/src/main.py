@@ -1,3 +1,6 @@
+import typing
+from typing import Callable, List
+
 import ed
 import rospy
 import numpy
@@ -72,29 +75,47 @@ def getContainer():
     return container
 
 """
-MoveToMiddleOver: calculate a velocity setpoint to move the end effector in the direction of over the box.
-implements the concept MoveTo( BOX, Middle ( Over(CONTAINER)))
+MoveToRegion: calculate a velocity setpoint to move the end effector in the direction of a region.
+implements the concept MoveTo( ?region )
 
-@return double[3] containing [velocity_x, velocity_y, velocity_z]
+@return float[3] containing [velocity_x, velocity_y, velocity_z]
 """
-def MoveToMiddleOver(vmax):   
-    container = getContainer()
+def MoveToRegion(regionfunc: Callable[[], List[float]], vmax: float) -> List[float]:
     ee_pose = getBoxPose()
-    if not container or not ee_pose:
-        rospy.logwarn(f"could not get object poses: container: {container}, ee_pose {ee_pose}")
+    if not ee_pose:
+        rospy.logwarn(f"MoveToRegion: could not get ee_pose, instead got {ee_pose}")
         return [0, 0, 0]
-    
-    dpos = container.pose.frame.p - ee_pose.p
-    # ignore height if high enough
-    # hardcoded dimensions for now
-    container_height = 0.11 # z
-    dpos.z( max(dpos.z() + container_height, 0) )
 
+    region = regionfunc()
+    if not region:
+        rospy.logwarn(f"MoveToRegion: could not find region, instead got {region}")
+    region_v = Vector(region[0], region[1], region[2])
+    dpos = region_v - ee_pose.p
+    # ignore height if high enough #hack assumes region_z is lower bound
+    dpos.z( max(dpos.z(), 0) )
 
     vel = dpos * 5.0
     if vel.Norm() > vmax:
         vel = vel*vmax/vel.Norm()
     return vel
+
+"""
+MiddleOver: calculate a line segment in the center of the region directly over the box.
+implements the concept Middle ( Over(CONTAINER))
+
+@return float[3] containing [x, y, z_min], or None
+"""
+def MiddleOver() -> List[float]:
+    container = getContainer()
+    if not container:
+        rospy.logwarn(f"could not get object pose: container: {container}")
+        return None
+
+    # hardcoded dimensions for now
+    container_height = 0.11 # z
+
+    # hack, uses the fact that the pose is represented with respect the pose of the center of the container
+    return [container.pose.frame.p.x(), container.pose.frame.p.y(), container.pose.frame.p.z() + container_height]
 
 """
 MoveInto: give a velocity into the box. In this usecase, always down.
@@ -202,7 +223,7 @@ class GuardedMotion:
     
 class Plan:
     def __init__(self):
-        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToMiddleOver(vmax=0.5), lambda: InRegionOver()),
+        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToRegion(lambda: MiddleOver(), vmax=0.5), lambda: InRegionOver()),
                                 "into": GuardedMotion(lambda: MoveInto(), lambda: Contact()),
                                 "against": GuardedMotion(None, lambda: Contact()),
                                 "align": GuardedMotion(None, lambda: False)}
