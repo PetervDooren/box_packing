@@ -6,8 +6,10 @@ project(box_packing)
 
 find_package(catkin REQUIRED COMPONENTS
     cmake_modules
-    roscpp
+    rospy
     )
+
+catkin_python_setup()
 
 catkin_package(
 #    INCLUDE_DIRS ...
