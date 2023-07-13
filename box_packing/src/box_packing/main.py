@@ -10,7 +10,8 @@ from PyKDL import Frame, Vector, Rotation, dot
 from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Point, Twist
 
-from box_packing.skills import MoveToRegion
+from box_packing.skills.motion_skills import MoveToRegion, Middle, Over, InRegion, MoveInto, Contact
+from box_packing.skills.region import BoxRegion
 
 # Global variables
 wm = None
@@ -62,7 +63,7 @@ def createMarker(id, origin, vector, constraint_met=False):
     marker.points.append(p2)
     return marker
 
-def getBoxPose():
+def getEEPose():
     # get ee pose
     try:
         trans = tfBuffer.lookup_transform("map", 'panda_EE', rospy.Time(0))
@@ -74,7 +75,18 @@ def getBoxPose():
 
 def getContainer():
     container = wm.get_entity("cardboard_box")
-    return container
+    
+    container_length = 0.22 # x
+    container_width = 0.235 # y
+    container_height = 0.11 # z
+
+    container.pose.frame.p.z(container.pose.frame.p.z() + container_height/2)
+    
+    return BoxRegion(container.pose.frame, container_length, container_width, container_height)
+
+def getVelocity():
+    global measured_vel
+    return measured_vel
 
 class GuardedMotion:
     def __init__(self, motion, guard):
@@ -94,10 +106,18 @@ class GuardedMotion:
     
 class Plan:
     def __init__(self):
-        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToRegion(lambda: MiddleOver(), vmax=0.5), lambda: InRegionOver()),
-                                "into": GuardedMotion(lambda: MoveInto(), lambda: Contact()),
-                                "against": GuardedMotion(None, lambda: Contact()),
-                                "align": GuardedMotion(None, lambda: False)}
+        self.guarded_motions = {"over": GuardedMotion(lambda: MoveToRegion(lambda:getEEPose(),
+                                                                           lambda: Middle(lambda: Over(lambda: getContainer())),
+                                                                           vmax=0.5),
+                                                      lambda: InRegion(lambda:getEEPose(),
+                                                                       lambda: Over(lambda: getContainer()))
+                                                      ),
+                                "into": GuardedMotion(lambda: MoveInto(),
+                                                      lambda: Contact(lambda: getVelocity())),
+                                "against": GuardedMotion(None,
+                                                         lambda: Contact(lambda: getVelocity())),
+                                "align": GuardedMotion(None,
+                                                       lambda: False)}
         self.transitions = {"over" : "into",
                             "into" : "against",
                             "against": "DONE"}
@@ -181,7 +201,7 @@ def main():
 
         # display velocity
 
-        ee_pose = getBoxPose()
+        ee_pose = getEEPose()
         if ee_pose:
             velocity_vector = Vector(v[0], v[1], v[2])
             marker = createMarker(0, ee_pose, velocity_vector, True)

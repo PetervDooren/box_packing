@@ -4,15 +4,22 @@ from typing import Callable, List
 
 import rospy
 from PyKDL import Frame, Vector, Rotation, dot
+from geometry_msgs.msg import Twist
+
+from .region import BoxRegion
+
+counter = 0
 
 """
 MoveToRegion: calculate a velocity setpoint to move the end effector in the direction of a region.
 implements the concept MoveTo( ?region )
 
+@param eeposefunc: callable function giving the pose of the end effector
+@param regionfunc: function returning the boxregion to move to
 @return float[3] containing [velocity_x, velocity_y, velocity_z]
 """
-def MoveToRegion(regionfunc: Callable[[], List[float]], vmax: float) -> List[float]:
-    ee_pose = getBoxPose()
+def MoveToRegion(eeposefunc: Callable[[], Frame], regionfunc: Callable[[], BoxRegion], vmax: float) -> List[float]:
+    ee_pose = eeposefunc()
     if not ee_pose:
         rospy.logwarn(f"MoveToRegion: could not get ee_pose, instead got {ee_pose}")
         return [0, 0, 0]
@@ -20,11 +27,13 @@ def MoveToRegion(regionfunc: Callable[[], List[float]], vmax: float) -> List[flo
     region = regionfunc()
     if not region:
         rospy.logwarn(f"MoveToRegion: could not find region, instead got {region}")
-    region_v = Vector(region[0], region[1], region[2])
-    dpos = region_v - ee_pose.p
-    # ignore height if high enough #hack assumes region_z is lower bound
-    dpos.z( max(dpos.z(), 0) )
+    dpos = region.getCenterPoint() - ee_pose.p
 
+    # ignore height if high enough
+    if ee_pose.p.z() > region.getMin().z():
+        dpos.z(0)
+
+    #TODO hardcoded gain
     vel = dpos * 5.0
     if vel.Norm() > vmax:
         vel = vel*vmax/vel.Norm()
@@ -34,19 +43,44 @@ def MoveToRegion(regionfunc: Callable[[], List[float]], vmax: float) -> List[flo
 MiddleOver: calculate a line segment in the center of the region directly over the box.
 implements the concept Middle ( Over(CONTAINER))
 
-@return float[3] containing [x, y, z_min], or None
+@param entityfunc: resolves to the entity with respect to which the Over region is defined.
+@return BoxRegion, or None
 """
-def MiddleOver() -> List[float]:
-    container = getContainer()
-    if not container:
-        rospy.logwarn(f"could not get object pose: container: {container}")
+def Middle(entityfunc: Callable[[], BoxRegion]) -> List[float]:
+    over = entityfunc()
+    if not over:
+        rospy.logwarn(f"MiddleOver: could not get 'over' region, instead got {over}")
+        return None
+
+    middleLine = BoxRegion(over.getCenterFrame(),
+                            0,
+                            0,
+                            over.dz)
+    return middleLine
+
+"""
+MiddleOver: calculate a line segment in the center of the region directly over the box.
+implements the concept Over(?)
+
+@param entityfunc: resolves to the entity with respect to which the Over region is defined.
+@return BoxRegion, or None
+"""
+def Over(entityfunc: Callable[[], BoxRegion]) -> List[float]:
+    region = entityfunc()
+    if not region:
+        rospy.logwarn(f"Over: could not get region, instead got {region}")
         return None
 
     # hardcoded dimensions for now
-    container_height = 0.11 # z
+    region_height = 1.0 # z
 
-    # hack, uses the fact that the pose is represented with respect the pose of the center of the container
-    return [container.pose.frame.p.x(), container.pose.frame.p.y(), container.pose.frame.p.z() + container_height]
+    middleframe = region.getCenterFrame()
+    middleframe.p.z(region.getMax().z() + region_height/2)
+    over_region = BoxRegion(middleframe,
+                            region.dx,
+                            region.dy,
+                            region_height)
+    return over_region
 
 """
 MoveInto: give a velocity into the box. In this usecase, always down.
@@ -64,13 +98,13 @@ implements the concept MoveAgainst( Side( CONTAINER))
 
 @return double[3] containing [velocity_x, velocity_y, velocity_z]
 """
-def MoveAgainst():
-    container = getContainer()
+def MoveAgainst(entityfunc: Callable[[], Frame]):
+    container = entityfunc()
     if not container:
         rospy.logwarn(f"could not get object poses: container: {container}")
         return False
     # get the coordinates of dpos in the frame of the container
-    y_container_map = container.pose.frame.M * Vector(0, 1, 0)
+    y_container_map = container.getRotation() * Vector(0, 1, 0)
 
     velocity = 0.2*[y_container_map.x, y_container_map.y, y_container_map.z]
     return velocity
@@ -81,35 +115,24 @@ implements the concept of InRegion(BOX, Over(CONTAINER))
 
 @return true: box is within the region
 """
-def InRegionOver():
-    container = getContainer()
-    ee_pose = getBoxPose()
-    if not container or not ee_pose:
-        rospy.logwarn(f"could not get object poses: container: {container}, ee_pose {ee_pose}")
+def InRegion(eeposefunc: Callable[[], Frame], regionfunc: Callable[[], BoxRegion]):
+    region = regionfunc()
+    ee_pose = eeposefunc()
+    if not region or not ee_pose:
+        rospy.logwarn(f"could not get entities: region: {region}, ee_pose {ee_pose}")
         return False
 
     # hardcoded dimensions for now
-    container_length = 0.22 # x
-    container_width = 0.235 # y
-    container_height = 0.11 # z
     buffer = 0.05
 
-    # pose of the container with respect to the end effector
-    dpos = container.pose.frame.p - ee_pose.p
+    # pose of the container with respect to the end effector in box frame
+    dpos = region.getRotation().Inverse() * (ee_pose.p - region.getCenterPoint()) 
 
-    # get the coordinates of dpos in the frame of the container
-    x_container_map = container.pose.frame.M * Vector(1, 0, 0)
-    y_container_map = container.pose.frame.M * Vector(0, 1, 0)
-    z_container_map = container.pose.frame.M * Vector(0, 0, 1)
-
-    dpos_x = dot(dpos, x_container_map)
-    dpos_y = dot(dpos, y_container_map)
-    dpos_z = dot(dpos, z_container_map)
-    if abs(dpos_x) > container_length/2:
+    if abs(dpos.x()) > region.dx/2 - buffer:
         return False
-    if abs(dpos_y) > container_width/2:
+    if abs(dpos.x()) > region.dy/2 - buffer:
         return False
-    if dpos_z > -container_height:
+    if abs(dpos.z()) > region.dz/2 - buffer:
         return False
     return True
 
@@ -118,9 +141,9 @@ Contact: determine whether the robot has made contact with the environment.
 
 @return True: if contact is thought to have been made.
 """
-def Contact():
+def Contact(velfunc: Callable[[], Twist]):
     global counter
-    global measured_vel
+    measured_vel = velfunc()
 
     if not measured_vel:
         return False
