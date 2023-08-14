@@ -18,6 +18,6 @@ requires the following dependencies:
 - ED: https://github.com/tue-robotics/pykdl_ros
 - ED: https://github.com/tue-robotics/tue_filesystem
 - ED: https://github.com/tue-robotics/tue_serialization
-- Franka_ros: https://github.com/frankaemika/franka_ros.git tag: tags/0.9.1
-- Moveit
-- Panda_moveit_config
+- Franka_ros: https://github.com/frankaemika/franka_ros tag: tags/0.9.1
+- Moveit: https://github.com/ros-planning/moveit
+- Panda_moveit_config: https://github.com/ros-planning/panda_moveit_config
