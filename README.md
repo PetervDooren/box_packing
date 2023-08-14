@@ -1,6 +1,6 @@
 # box_packing
 
-Installation:
+## Installation:
 requires the following dependencies:
 - ED: https://github.com/tue-robotics/catkin_lint_cmake
 - ED: https://github.com/tue-robotics/code_profiler
@@ -21,3 +21,13 @@ requires the following dependencies:
 - Franka_ros: https://github.com/frankaemika/franka_ros tag: tags/0.9.1
 - Moveit: https://github.com/ros-planning/moveit
 - Panda_moveit_config: https://github.com/ros-planning/panda_moveit_config
+- libfranka (sudo apt-get install ros-noeitic-libfranka)
+
+
+## running the demo
+build and source the workspace.
+then type:
+`roslaunch tools panda_start`
+
+To activate the controller call the trigger service
+`rosservice call /my_controller/trigger "{}"`
