@@ -11,4 +11,6 @@ install(DIRECTORY robots
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-catkin_add_nosetests(test/urdf.py)
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(test/urdf.py)
+endif()
