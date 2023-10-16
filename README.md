@@ -1,31 +1,33 @@
 # box_packing
 
 ## Installation:
-requires the following dependencies:
-- ED: https://github.com/tue-robotics/catkin_lint_cmake
-- ED: https://github.com/tue-robotics/code_profiler
-- Orocos KDL: https://github.com/orocos/orocos_kinematics_dynamics
-- ED: https://github.com/tue-robotics/ed branch peter/volume_pose
-- ED: https://github.com/tue-robotics/ed_object_models
-- ED: https://github.com/tue-robotics/ed_python
-- ED: https://github.com/tue-robotics/ed_rviz_plugins
-- ED: https://github.com/tue-robotics/geolib2
-- ED: https://github.com/tue-robotics/ed_moveit
-- ED: https://github.com/tue-robotics/ed_msgs
-- ED: https://github.com/tue-robotics/ed_gui_server
-- ED: https://github.com/tue-robotics/tue_config
-- ED: https://github.com/tue-robotics/rgbd
-- ED: https://github.com/tue-robotics/pykdl_ros
-- ED: https://github.com/tue-robotics/tue_filesystem
-- ED: https://github.com/tue-robotics/tue_serialization
-- Franka_ros: https://github.com/frankaemika/franka_ros tag: tags/0.9.1
-- Moveit: https://github.com/ros-planning/moveit
-- Panda_moveit_config: https://github.com/ros-planning/panda_moveit_config
-- libfranka (sudo apt-get install ros-noeitic-libfranka)
+1. Bootstrap the package manager
+
+   ```bash
+   source <(wget -O - https://raw.githubusercontent.com/tue-robotics/tue-env/master/installer/bootstrap.bash)  # for default ROS1
+   ```
+
+2. Change targets branch
+
+   ```bash
+   tue-env targets && git checkout peter/flexcraft
+   ```
+2. Install targets
+
+   ```bash
+   tue-get install ros-box_packing
+   tue-get install ros-tools
+   ```
+
+3. Build sources
+
+   ```bash
+   tue-make
+   source ~/.bashrc  # Or open a new terminal
 
 
 ## running the demo
-build and source the workspace.
+after sourcing the workspace.
 then type:
 `roslaunch tools panda_start`
 
