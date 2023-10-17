@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import typing
 from typing import Callable, List
 
@@ -24,19 +25,19 @@ translate a tf transform into a pyKDL frame representing the same transform
 """
 def tfToKDLFrame(transform):
     position = Vector(transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z)
-    rotation = Rotation.Quaternion(transform.transform.rotation.x, 
+    rotation = Rotation.Quaternion(transform.transform.rotation.x,
                                     transform.transform.rotation.y,
                                     transform.transform.rotation.z,
                                     transform.transform.rotation.w)
     return Frame(rotation, position)
 
 def createMarker(id, origin, vector, constraint_met=False):
-    marker = Marker() 
+    marker = Marker()
     marker.id = id
     marker.lifetime = rospy.Duration()
     marker.header.frame_id = "map"
-    marker.type = Marker.ARROW 
-    marker.action = Marker.ADD 
+    marker.type = Marker.ARROW
+    marker.action = Marker.ADD
     marker.scale.x = 0.02
     marker.scale.y = 0.04
     marker.color.a = 1.0
@@ -44,20 +45,20 @@ def createMarker(id, origin, vector, constraint_met=False):
         marker.color.g = 1.0
     else:
         marker.color.r = 1.0
-    marker.pose.orientation.w=1.0 
-    marker.pose.position.x = origin.p.x() 
+    marker.pose.orientation.w=1.0
+    marker.pose.position.x = origin.p.x()
     marker.pose.position.y = origin.p.y()
     marker.pose.position.z = origin.p.z()
     marker.points=[]
     # start point
-    p1 = Point() 
-    p1.x = 0 
-    p1.y = 0 
-    p1.z = 0 
+    p1 = Point()
+    p1.x = 0
+    p1.y = 0
+    p1.z = 0
     marker.points.append(p1)
     # direction
-    p2 = Point() 
-    p2.x = vector.x() 
+    p2 = Point()
+    p2.x = vector.x()
     p2.y = vector.y()
     p2.z = vector.z()
     marker.points.append(p2)
@@ -75,13 +76,13 @@ def getEEPose():
 
 def getContainer():
     container = wm.get_entity("cardboard_box")
-    
+
     container_length = 0.22 # x
     container_width = 0.235 # y
     container_height = 0.11 # z
 
     container.pose.frame.p.z(container.pose.frame.p.z() + container_height/2)
-    
+
     return BoxRegion(container.pose.frame, container_length, container_width, container_height)
 
 def getVelocity():
@@ -97,13 +98,13 @@ class GuardedMotion:
         if not self.motion_func:
             return None
         return self.motion_func()
-    
+
     def guard(self):
         if not self.guard_func:
             rospy.logerr("No guard function provided to guarded motion")
             return False
         return self.guard_func()
-    
+
 class Plan:
     def __init__(self):
         self.guarded_motions = {"over": GuardedMotion(lambda: MoveToRegion(lambda:getEEPose(),
@@ -155,12 +156,12 @@ def main():
     active_motions = plan.starting_motions
 
     plan_done = False
-    
+
     while not rospy.is_shutdown() and not plan_done:
         v = [0,0,0]
 
         rospy.loginfo(f"loop start, active motions {active_motions}")
-        
+
         # execute motion
         for m in active_motions:
             guarded_motion = plan.guarded_motions[m]
@@ -176,7 +177,7 @@ def main():
             guarded_motion = plan.guarded_motions[m]
             if guarded_motion.guard():
                 activated_guards.append(m)
-        
+
         # apply transitions
         for g in activated_guards:
             active_motions.remove(g) # remove the original guarded motion.
