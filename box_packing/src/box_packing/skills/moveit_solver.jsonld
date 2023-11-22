@@ -1,0 +1,8 @@
+{
+    @context: "http://example.com",
+    @type: "http://example.com/solver",
+    "name": "moveit",
+    "ID": "moveitsolver",
+    "capabilities": ["move_to_cartesian"],
+    "parameters": ["task_frame", "goal"]
+}

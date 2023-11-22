@@ -1,0 +1,7 @@
+{
+    "@context": {
+        "skill": "example1",
+        "preconditions": "rdf:list"
+    },
+    "skill": "example/skill"
+}

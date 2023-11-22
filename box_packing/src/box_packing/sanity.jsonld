@@ -1,0 +1,13 @@
+[
+  {
+    "@id": "http://example.com/drewp",
+    "@type": [
+      "http://xmlns.com/foaf/0.1/Person"
+    ],
+    "http://example.com/says": [
+      {
+        "@value": "Hello World"
+      }
+    ]
+  }
+]

@@ -1,0 +1,8 @@
+{
+    "@context": {
+        "local": "file:///home/peter/ros/flexcraft/repos/github.com/PetervDooren/box_packing/box_packing/src/box_packing/skills/example.jsonld",
+        "skill": "local:skill"
+    },
+    "@id": "skill",
+    "name": []
+}

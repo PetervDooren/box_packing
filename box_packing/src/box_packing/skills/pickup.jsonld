@@ -1,0 +1,62 @@
+{
+    @context: "http://example.com",
+    @type: "http://example.com/skill",
+    @id: "pickup1",
+    "name": "pickup",
+    "parameters": ["Gripper", "Box", "Grasp"],
+    "goal": {
+        "holding": {
+            "gripper": "Gripper",
+            "object": "Box"
+        }
+    },
+    "preconditions": {},
+    "subtasks": {
+        "move_to_pregrasp_task": {
+            "type": "move_to_cartesian",
+            "arguments": {
+                "task_frame": "Gripper",
+                "goal": {
+                    "pregrasp": {
+                        "grasp": "Grasp"
+                    }
+                }
+            }
+        },
+        "approach_task": {
+            "type": "control_to_contact",
+            "arguments": {
+                "contacts": "Grasp"
+            }
+        },
+        "close_task": {
+            "type": "close_gripper",
+            "arguments": {
+                "gripper": "Gripper"
+            }
+        },
+        "lift_task": {
+            "type": "move_out_of_contact",
+            "arguments": {
+                "object": "Box"
+            }
+        }
+    },
+    "discrete_control": {
+        "finite_state_machine": {
+            "initial" : "approach",
+            "states": {
+                "move_to_pregrasp_state": "move_to_pregrasp_task",
+                "control_state": "control_task",
+                "close_state": "close_task",
+                "lift_state": "lift_task"
+            },
+            "transitions": {
+                "move_to_pregrasp_state": "control_state",
+                "control_state": "close_state",
+                "close_state": "lift_state",
+                "lift_state": "EXIT"
+            }
+        }
+    }
+}
