@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
     // create controller
     ConstraintController controller(model);
     controller.SetDesiredPosition(position_d, orientation_d);
+    controller.SetStiffnessDamping(stiffness, damping);
 
     // define callback for the torque control loop
     std::function<franka::Torques(const franka::RobotState&, franka::Duration)>
