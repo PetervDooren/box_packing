@@ -100,7 +100,12 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
         continue;
       // constraint is not met. add to interaction matrix.
       active_constraint_ids.push_back(i);
-    }    
+    }
+
+    if (active_constraint_ids.size() > 0)
+    {
+      return {0, 0, 0, 0, 0, 0, 0};
+    }
 
     // construct interaction matrix
     Eigen::Matrix<double, Eigen::Dynamic, 6> interaction_matrix;
@@ -108,6 +113,7 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
 
     Eigen::VectorXd constraint_velocity_reference;
     constraint_velocity_reference.resize(active_constraint_ids.size(), 1);
+
     for (int i=0; i<active_constraint_ids.size(); i++)
     {
       Constraint constraint = constraints_[active_constraint_ids[i]];
@@ -120,27 +126,5 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
 
     // joint velocity controller
     
-      
-      // compute error to desired equilibrium pose
-      // position error
-      Eigen::Matrix<double, 6, 1> error;
-      error.head(3) << position - position_d_;
-      // orientation error
-      // "difference" quaternion
-      if (orientation_d_.coeffs().dot(orientation.coeffs()) < 0.0) {
-        orientation.coeffs() << -orientation.coeffs();
-      }
-      // "difference" quaternion
-      Eigen::Quaterniond error_quaternion(orientation.inverse() * orientation_d_);
-      error.tail(3) << error_quaternion.x(), error_quaternion.y(), error_quaternion.z();
-      // Transform to base frame
-      error.tail(3) << -transform.linear() * error.tail(3);
-      // compute control
-      Eigen::VectorXd tau_task(7), tau_d(7);
-      // Spring damper system with damping ratio=1
-      tau_task << jacobian.transpose() * (-stiffness_ * error - damping_ * (jacobian * dq));
-      tau_d << tau_task + coriolis;
-      std::array<double, 7> tau_d_array{};
-      Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
-      return tau_d_array;
+    return {0, 0, 0, 0, 0, 0, 0};
 };
