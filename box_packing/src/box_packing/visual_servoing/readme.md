@@ -1,0 +1,1 @@
+This folder contains files for a visual servoing demonstration in which the robot is controlled using a constraint based motion solver.
