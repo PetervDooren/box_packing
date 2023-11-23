@@ -7,11 +7,20 @@
 #include <franka/exception.h>
 #include <franka/model.h>
 #include <franka/robot.h>
+#include <vector>
+
+
+struct Constraint{
+    int id;
+    int direction;
+    double max;
+    double min;
+};
 
 
 class ConstraintController{
     public:
-    ConstraintController(const franka::Model& model): model_(model){};
+    ConstraintController(const franka::Model& model);
 
     void SetDesiredPosition(Eigen::Vector3d position_d, Eigen::Quaterniond orientation_d)
     {
@@ -33,4 +42,6 @@ class ConstraintController{
     Eigen::Quaterniond orientation_d_; // temp remove later
     Eigen::MatrixXd stiffness_;
     Eigen::MatrixXd damping_;
+
+    std::vector<Constraint> constraints_;
 };
