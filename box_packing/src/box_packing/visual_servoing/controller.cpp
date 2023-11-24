@@ -19,9 +19,9 @@ double evaluateConstraint(const Constraint& c, Eigen::Vector3d position)
  * return the direction [x, y, z, Rx, Ry, Rz] in which the constraint will increase.
  * dc/dP
 */
-Eigen::Matrix<double, 6, 1> getConstraintDirection(const Constraint& c, Eigen::Vector3d position)
+Eigen::Matrix<double, 1, 6> getConstraintDirection(const Constraint& c, Eigen::Vector3d position)
 {
-  Eigen::Matrix<double, 6, 1> derivative;
+  Eigen::Matrix<double, 1, 6> derivative;
   switch(c.direction){
     case 1: // get rotation about the x axis
       //value = atan(position.y()/position.z());
@@ -97,7 +97,7 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     for (int i=0; i<constraints_.size(); i++){
       Constraint constraint = constraints_[i];
       double constraint_value = evaluateConstraint(constraint, position_box_ee_ee);
-      std::cout << "constraint " << constraint.id << " has value " << constraint_value << std::endl; 
+      //std::cout << "constraint " << constraint.id << " has value " << constraint_value << std::endl; 
       if(constraint_value > constraint.min && constraint_value < constraint.max)
         continue;
       // constraint is not met. add to interaction matrix.
@@ -106,25 +106,27 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
 
     if (!active_constraint_index.size() > 0)
     {
+      std::cout << "no active constraints " << active_constraint_index.size() << std::endl;
       return {0, 0, 0, 0, 0, 0, 0};
     }
 
+    std::cout << "found " << active_constraint_index.size() << " active constraints"<< std::endl;
     // construct interaction matrix
     Eigen::Matrix<double, Eigen::Dynamic, 6> interaction_matrix;
     interaction_matrix.resize(active_constraint_index.size(), 6);
-
+    
     Eigen::VectorXd constraint_velocity_reference;
     constraint_velocity_reference.resize(active_constraint_index.size(), 1);
 
     for (int i=0; i<active_constraint_index.size(); i++)
     {
       Constraint constraint = constraints_[active_constraint_index[i]];
-      Eigen::Matrix<double, 6, 1> derivative = getConstraintDirection(constraint, position_box_ee_ee);
+      Eigen::Matrix<double, 1, 6> derivative = getConstraintDirection(constraint, position_box_ee_ee);
       interaction_matrix.row(i) << derivative;
 
-      constraint_velocity_reference[i,1] = constraintControl(constraint, position_box_ee_ee);
+      constraint_velocity_reference(i) = constraintControl(constraint, position_box_ee_ee);
     }
-    std::cout << "interaction matrix: " << std:: endl << interaction_matrix << std::endl;
+    //std::cout << "interaction matrix: " << std:: endl << interaction_matrix << std::endl;
 
     // solve the pseudo inverse for joint velocities
 
