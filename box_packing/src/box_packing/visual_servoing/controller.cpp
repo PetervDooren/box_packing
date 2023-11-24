@@ -91,32 +91,33 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     // get current vector of end effector to marker/box
     Eigen::Vector3d position_box_ee = orientation.toRotationMatrix() * (position_d_ - position); // position of the box in endeffector frame
 
-    std::vector<int> active_constraint_ids;
+    std::vector<int> active_constraint_index;
     // evaluate constraints values
     for (int i=0; i<constraints_.size(); i++){
       Constraint constraint = constraints_[i];
       double constraint_value = evaluateConstraint(constraint, position_box_ee);
+      std::cout << "constraint " << constraint.id << " has value " << constraint_value << std::endl; 
       if(constraint_value > constraint.min && constraint_value < constraint.max)
         continue;
       // constraint is not met. add to interaction matrix.
-      active_constraint_ids.push_back(i);
+      active_constraint_index.push_back(i);
     }
 
-    if (active_constraint_ids.size() > 0)
+    if (!active_constraint_index.size() > 0)
     {
       return {0, 0, 0, 0, 0, 0, 0};
     }
 
     // construct interaction matrix
     Eigen::Matrix<double, Eigen::Dynamic, 6> interaction_matrix;
-    interaction_matrix.resize(active_constraint_ids.size(), 6);
+    interaction_matrix.resize(active_constraint_index.size(), 6);
 
     Eigen::VectorXd constraint_velocity_reference;
-    constraint_velocity_reference.resize(active_constraint_ids.size(), 1);
+    constraint_velocity_reference.resize(active_constraint_index.size(), 1);
 
-    for (int i=0; i<active_constraint_ids.size(); i++)
+    for (int i=0; i<active_constraint_index.size(); i++)
     {
-      Constraint constraint = constraints_[active_constraint_ids[i]];
+      Constraint constraint = constraints_[active_constraint_index[i]];
       Eigen::Matrix<double, 6, 1> derivative = getConstraintDirection(constraint, position_box_ee);
       interaction_matrix.row(i) << derivative;
 
