@@ -89,13 +89,14 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     Eigen::Quaterniond orientation(transform.linear());
 
     // get current vector of end effector to marker/box
-    Eigen::Vector3d position_box_ee = orientation.toRotationMatrix() * (position_d_ - position); // position of the box in endeffector frame
+    Eigen::Vector3d position_box_ee_w = position_d_ - position; // position of the box with respect to the end effector in world frame
+    Eigen::Vector3d position_box_ee_ee = orientation.toRotationMatrix() * position_box_ee_w; // position of the box with respect to the end effector in endeffector frame
 
     std::vector<int> active_constraint_index;
     // evaluate constraints values
     for (int i=0; i<constraints_.size(); i++){
       Constraint constraint = constraints_[i];
-      double constraint_value = evaluateConstraint(constraint, position_box_ee);
+      double constraint_value = evaluateConstraint(constraint, position_box_ee_ee);
       std::cout << "constraint " << constraint.id << " has value " << constraint_value << std::endl; 
       if(constraint_value > constraint.min && constraint_value < constraint.max)
         continue;
@@ -118,11 +119,13 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     for (int i=0; i<active_constraint_index.size(); i++)
     {
       Constraint constraint = constraints_[active_constraint_index[i]];
-      Eigen::Matrix<double, 6, 1> derivative = getConstraintDirection(constraint, position_box_ee);
+      Eigen::Matrix<double, 6, 1> derivative = getConstraintDirection(constraint, position_box_ee_ee);
       interaction_matrix.row(i) << derivative;
 
-      constraint_velocity_reference[i,1] = constraintControl(constraint, position_box_ee);
+      constraint_velocity_reference[i,1] = constraintControl(constraint, position_box_ee_ee);
     }
+    std::cout << "interaction matrix: " << std:: endl << interaction_matrix << std::endl;
+
     // solve the pseudo inverse for joint velocities
 
     // joint velocity controller
