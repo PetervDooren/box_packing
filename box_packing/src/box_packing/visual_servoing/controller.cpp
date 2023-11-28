@@ -149,8 +149,15 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     //std::cout << "interaction matrix: " << std:: endl << interaction_matrix << std::endl;
 
     // solve the pseudo inverse for joint velocities
+    Eigen::Matrix<double, Eigen::Dynamic, 7> MJ;
+    MJ.resize(active_constraint_index.size(), 7);
+    MJ = interaction_matrix * jacobian;
+
+    Eigen::VectorXd tau_d(7);
+    // TODO use better solver for pseudo inverse
+    tau_d = MJ.completeOrthogonalDecomposition().pseudoInverse() * constraint_velocity_reference;
 
     // joint velocity controller
-    
+    std::array<double, 7> tau_d_array{};
     return {0, 0, 0, 0, 0, 0, 0};
 };
