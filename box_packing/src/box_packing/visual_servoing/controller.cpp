@@ -19,9 +19,9 @@ double evaluateConstraint(const Constraint& c, Eigen::Vector3d position)
  * return the direction [x, y, z, Rx, Ry, Rz] in which the constraint will increase.
  * dc/dP. with P the pose of the end effector expressed in world frame.
 */
-Eigen::Matrix<double, 1, 6> getConstraintDirection(const Constraint& c, Eigen::Vector3d position, Eigen::Quaterniond orientation)
+Eigen::VectorXd getConstraintDirection(const Constraint& c, Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
-  Eigen::Matrix<double, 1, 6> derivative;
+  Eigen::VectorXd derivative(6);
   switch(c.direction){
     case 1: // get rotation about the x axis
     {
