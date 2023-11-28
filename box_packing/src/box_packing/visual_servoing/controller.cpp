@@ -30,6 +30,9 @@ Eigen::Matrix<double, 1, 6> getConstraintDirection(const Constraint& c, Eigen::V
       dydPe << 0, 1/position.z(), -position.y()/(position.z()*position.z())
       derivative.head() << orientation.toRotationMatrix() * dydPe
       // orientation component
+      dydRe = Eigen::Vector3d; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
+      dydRe << 0, 1, 0
+      derivative.tail(3) << orientation.toRotationMatrix() * dydRe
       break;
     case 2: // get rotation about the y axis
       //value = atan(position.x()/position.z());
@@ -38,6 +41,9 @@ Eigen::Matrix<double, 1, 6> getConstraintDirection(const Constraint& c, Eigen::V
       dydPe << 0, 1/position.z(), -position.x()/(position.z()*position.z())
       derivative.head() << orientation.toRotationMatrix() * dydPe
       // orientation component
+      dydRe = Eigen::Vector3d; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
+      dydRe << 1, 0, 0
+      derivative.tail(3) << orientation.toRotationMatrix() * dydRe
       break;
     default:
       std::cerr << "invalid constraint direction: " << c.direction << std::endl;
