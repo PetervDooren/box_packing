@@ -106,7 +106,7 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     Eigen::Vector3d position(transform.translation());
     Eigen::Quaterniond orientation(transform.linear());
 
-    std::cout << "euler angles: " << orientation.toRotationMatrix().eulerAngles(0, 1, 2) << std::endl;
+    //std::cout << "euler angles: " << orientation.toRotationMatrix().eulerAngles(0, 1, 2) << std::endl;
 
     // get current vector of end effector to marker/box
     Eigen::Vector3d position_box_ee_w = position_d_ - position; // position of the box with respect to the end effector in world frame
