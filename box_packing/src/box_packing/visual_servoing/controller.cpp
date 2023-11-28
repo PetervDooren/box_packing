@@ -24,27 +24,31 @@ Eigen::Matrix<double, 1, 6> getConstraintDirection(const Constraint& c, Eigen::V
   Eigen::Matrix<double, 1, 6> derivative;
   switch(c.direction){
     case 1: // get rotation about the x axis
+    {
       //value = atan(position.y()/position.z());
       // position component
-      dydPe = Eigen::Vector3d; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
-      dydPe << 0, 1/position.z(), -position.y()/(position.z()*position.z())
-      derivative.head() << orientation.toRotationMatrix() * dydPe
+      Eigen::Vector3d dydPe; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
+      dydPe << 0, 1/position.z(), -position.y()/(position.z()*position.z());
+      derivative.head(3) << orientation.toRotationMatrix() * dydPe;
       // orientation component
-      dydRe = Eigen::Vector3d; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
-      dydRe << 0, 1, 0
-      derivative.tail(3) << orientation.toRotationMatrix() * dydRe
+      Eigen::Vector3d dydRe; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
+      dydRe << 0, 1, 0;
+      derivative.tail(3) << orientation.toRotationMatrix() * dydRe;
       break;
+    }
     case 2: // get rotation about the y axis
+    {
       //value = atan(position.x()/position.z());
       // position component
-      dydPe = Eigen::Vector3d; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
-      dydPe << 0, 1/position.z(), -position.x()/(position.z()*position.z())
-      derivative.head() << orientation.toRotationMatrix() * dydPe
+      Eigen::Vector3d dydPe; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
+      dydPe << 0, 1/position.z(), -position.x()/(position.z()*position.z());
+      derivative.head(3) << orientation.toRotationMatrix() * dydPe;
       // orientation component
-      dydRe = Eigen::Vector3d; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
-      dydRe << 1, 0, 0
-      derivative.tail(3) << orientation.toRotationMatrix() * dydRe
+      Eigen::Vector3d dydRe; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
+      dydRe << 1, 0, 0;
+      derivative.tail(3) << orientation.toRotationMatrix() * dydRe;
       break;
+    }
     default:
       std::cerr << "invalid constraint direction: " << c.direction << std::endl;
   }
