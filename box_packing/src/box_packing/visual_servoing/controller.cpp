@@ -17,19 +17,27 @@ double evaluateConstraint(const Constraint& c, Eigen::Vector3d position)
 
 /**
  * return the direction [x, y, z, Rx, Ry, Rz] in which the constraint will increase.
- * dc/dP
+ * dc/dP. with P the pose of the end effector expressed in world frame.
 */
-Eigen::Matrix<double, 1, 6> getConstraintDirection(const Constraint& c, Eigen::Vector3d position)
+Eigen::Matrix<double, 1, 6> getConstraintDirection(const Constraint& c, Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
   Eigen::Matrix<double, 1, 6> derivative;
   switch(c.direction){
     case 1: // get rotation about the x axis
       //value = atan(position.y()/position.z());
-      derivative << 0, 1/position.z(), -position.y()/(position.z()*position.z()), 1, 0, 0; // dy, dE expressed in E
+      // position component
+      dydPe = Eigen::Vector3d; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
+      dydPe << 0, 1/position.z(), -position.y()/(position.z()*position.z())
+      derivative.head() << orientation.toRotationMatrix() * dydPe
+      // orientation component
       break;
     case 2: // get rotation about the y axis
       //value = atan(position.x()/position.z());
-      derivative << 0, 1/position.z(), -position.y()/(position.z()*position.z()), 1, 0, 0; // dy, dE expressed in E
+      // position component
+      dydPe = Eigen::Vector3d; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
+      dydPe << 0, 1/position.z(), -position.x()/(position.z()*position.z())
+      derivative.head() << orientation.toRotationMatrix() * dydPe
+      // orientation component
       break;
     default:
       std::cerr << "invalid constraint direction: " << c.direction << std::endl;
@@ -121,7 +129,7 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     for (int i=0; i<active_constraint_index.size(); i++)
     {
       Constraint constraint = constraints_[active_constraint_index[i]];
-      Eigen::Matrix<double, 1, 6> derivative = getConstraintDirection(constraint, position_box_ee_ee);
+      Eigen::Matrix<double, 1, 6> derivative = getConstraintDirection(constraint, position_box_ee_ee, orientation);
       interaction_matrix.row(i) << derivative;
 
       constraint_velocity_reference(i) = constraintControl(constraint, position_box_ee_ee);
