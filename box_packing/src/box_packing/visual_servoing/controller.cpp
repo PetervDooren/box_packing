@@ -154,8 +154,10 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
     MJ = interaction_matrix * jacobian;
 
     Eigen::VectorXd dq_d(7);
-    // TODO use better solver for pseudo inverse
-    dq_d = MJ.completeOrthogonalDecomposition().pseudoInverse() * constraint_velocity_reference;
+    auto COD = MJ.completeOrthogonalDecomposition();
+    dq_d = COD.solve(constraint_velocity_reference);
+
+    std::cout << "desired_joint velocity: " << dq_d << std::endl;
 
     std::cout << "desired_torque: " << dq_d << std::endl;
 
