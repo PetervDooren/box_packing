@@ -40,7 +40,9 @@ int main(int argc, char** argv) {
     franka::RobotState initial_state = robot.readOnce();
     // equilibrium point is the initial position
     Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
-    Eigen::Vector3d position_d(initial_transform.translation());
+    //Eigen::Vector3d position_d(initial_transform.translation());
+    Eigen::Vector3d position_d;
+    position_d << 1, 0, 0;
     Eigen::Quaterniond orientation_d(initial_transform.linear());
     // set collision behavior
     robot.setCollisionBehavior({{100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0}},
