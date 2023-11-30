@@ -28,12 +28,13 @@ Eigen::VectorXd getConstraintDirection(const Constraint& c, Eigen::Vector3d posi
       //value = atan(position.y()/position.z());
       // position component
       Eigen::Vector3d dydPe; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
-      dydPe << 0, 1/position.z(), -position.y()/(position.z()*position.z());
-      derivative.head(3) << orientation.toRotationMatrix() * dydPe;
+      //dydPe << 0, 1/position.z(), -position.y()/(position.z()*position.z());
+      dydPe << 0, 0, 0;
+      derivative.head(3) << orientation.toRotationMatrix().transpose() * dydPe;
       // orientation component
       Eigen::Vector3d dydRe; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
-      dydRe << 0, -1, 0;
-      derivative.tail(3) << orientation.toRotationMatrix() * dydRe;
+      dydRe << 1, 0, 0;
+      derivative.tail(3) << orientation.toRotationMatrix().transpose() * dydRe;
       break;
     }
     case 2: // get rotation about the y axis
@@ -41,12 +42,13 @@ Eigen::VectorXd getConstraintDirection(const Constraint& c, Eigen::Vector3d posi
       //value = atan(position.x()/position.z());
       // position component
       Eigen::Vector3d dydPe; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
-      dydPe << 0, 1/position.z(), -position.x()/(position.z()*position.z());
-      derivative.head(3) << orientation.toRotationMatrix() * dydPe;
+      //dydPe << 0, 1/position.z(), -position.x()/(position.z()*position.z());
+      dydPe << 0, 0, 0;
+      derivative.head(3) << orientation.toRotationMatrix().transpose() * dydPe;
       // orientation component
       Eigen::Vector3d dydRe; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
-      dydRe << 1, 0, 0;
-      derivative.tail(3) << orientation.toRotationMatrix() * dydRe;
+      dydRe << 0, -1, 0;
+      derivative.tail(3) << orientation.toRotationMatrix().transpose() * dydRe;
       break;
     }
     default:
@@ -57,17 +59,18 @@ Eigen::VectorXd getConstraintDirection(const Constraint& c, Eigen::Vector3d posi
 
 double constraintControl(const Constraint& c, Eigen::Vector3d position)
 {
-  double K = 1;
-  double dy_max = 1;
+  double K = 5;
+  double dy_max = 3;
+  double dy_min = 0.2;
 
   double value = evaluateConstraint(c, position);
   if (value < c.min)
   {
-    return std::min(-K * (c.min - value), dy_max); // positive value
+    return std::max(std::min(-K * (c.min - value), dy_max), dy_min); // positive value
   }
   else if (value > c.max)
   {
-    return std::max(-K * (c.max - value), -dy_max); // negative value
+    return std::min(std::max(-K * (c.max - value), -dy_max), -dy_min); // negative value
   }
   std::cerr << "active constraint " << c.id << " has value " << value << ", inside [" << c.min << ", " << c.max << "]" << std::endl; 
   return 0;
@@ -79,15 +82,15 @@ ConstraintController::ConstraintController(const franka::Model& model): model_(m
   Constraint Rotx;
   Rotx.id = 0;
   Rotx.direction = 1;
-  Rotx.min = -0.5;
-  Rotx.max = 0.5;
+  Rotx.min = -0.1;
+  Rotx.max = 0.1;
   constraints_.push_back(Rotx);
 
   Constraint Roty;
   Roty.id = 1;
   Roty.direction = 2;
-  Roty.min = -0.5;
-  Roty.max = 0.5;
+  Roty.min = -0.1;
+  Roty.max = 0.1;
   constraints_.push_back(Roty);
 }
 
@@ -111,13 +114,14 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     // get current vector of end effector to marker/box
     Eigen::Vector3d position_box_ee_w = position_d_ - position; // position of the box with respect to the end effector in world frame
     Eigen::Vector3d position_box_ee_ee = orientation.toRotationMatrix() * position_box_ee_w; // position of the box with respect to the end effector in endeffector frame
+    std::cout << "pos in ee: " << position_box_ee_ee.x() << ", " << position_box_ee_ee.y() << ", " << position_box_ee_ee.z() << std::endl;
 
     std::vector<int> active_constraint_index;
     // evaluate constraints values
     for (int i=0; i<constraints_.size(); i++){
       Constraint constraint = constraints_[i];
       double constraint_value = evaluateConstraint(constraint, position_box_ee_ee);
-      //std::cout << "constraint " << constraint.id << " has value " << constraint_value << std::endl; 
+      std::cout << "c" << constraint.id << ": " << constraint_value << std::endl; 
       if(constraint_value > constraint.min && constraint_value < constraint.max)
         continue;
       // constraint is not met. add to interaction matrix.
@@ -147,6 +151,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
       constraint_velocity_reference(i) = constraintControl(constraint, position_box_ee_ee);
     }
     //std::cout << "interaction matrix: " << std:: endl << interaction_matrix << std::endl;
+    //std::cout << "constraint velocity reference: " << constraint_velocity_reference << std::endl;
 
     // solve the pseudo inverse for joint velocities
     Eigen::Matrix<double, Eigen::Dynamic, 7> MJ;
