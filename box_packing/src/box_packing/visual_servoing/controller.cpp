@@ -32,7 +32,7 @@ Eigen::VectorXd getConstraintDirection(const Constraint& c, Eigen::Vector3d posi
       derivative.head(3) << orientation.toRotationMatrix() * dydPe;
       // orientation component
       Eigen::Vector3d dydRe; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
-      dydRe << 0, 1, 0;
+      dydRe << 0, -1, 0;
       derivative.tail(3) << orientation.toRotationMatrix() * dydRe;
       break;
     }
