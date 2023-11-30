@@ -104,6 +104,10 @@ int main(int argc, char** argv) {
         if (newdata){
           // calculate new joint velocity reference
           std::array<double, 7> dq_d = controller.callback(robot_state);
+          std::cout << "constraint thread: dq_d: ";
+          for (int i=0; i< 7; i++)
+            std::cout << dq_d[i];
+          std::cout << std::endl;
 
           // Try to lock data to avoid read write collisions.
           if (sm_dq_d.mutex.try_lock()) {
@@ -137,7 +141,7 @@ int main(int argc, char** argv) {
         sm_dq_d.mutex.unlock();
       }
 
-      const std::array<double, 7> k_gains = {{600.0, 600.0, 600.0, 600.0, 250.0, 150.0, 50.0}};
+      const std::array<double, 7> k_gains = {{50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0}};
 
       std::array<double, 7> tau_d_calculated;
       for (size_t i = 0; i < 7; i++) {
