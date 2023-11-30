@@ -108,6 +108,7 @@ int main(int argc, char** argv) {
           // Try to lock data to avoid read write collisions.
           if (sm_dq_d.mutex.try_lock()) {
             sm_dq_d.dq_d = dq_d;
+            sm_dq_d.has_data = true;
             sm_dq_d.mutex.unlock();
           }
         }
@@ -120,15 +121,12 @@ int main(int argc, char** argv) {
         impedance_control_callback = [&](const franka::RobotState& robot_state,
                                          franka::Duration duration) -> franka::Torques {
       if (sm_robot_state.mutex.try_lock()) {
-        if (sm_robot_state.has_data) {
-          // read robot state data
-          sm_robot_state.robot_state = robot_state;
-          sm_robot_state.has_data = true;
-        }
+        // read robot state data
+        sm_robot_state.robot_state = robot_state;
+        sm_robot_state.has_data = true;
         sm_robot_state.mutex.unlock();
       }
 
-      std::array<double, 7> dq_d;
       // Try to lock data to avoid read write collisions.
       if (sm_dq_d.mutex.try_lock()) {
         if (sm_dq_d.has_data)
@@ -143,7 +141,7 @@ int main(int argc, char** argv) {
 
       std::array<double, 7> tau_d_calculated;
       for (size_t i = 0; i < 7; i++) {
-        tau_d_calculated[i] = k_gains[i] * (dq_d[i] - robot_state.dq[i]);
+        tau_d_calculated[i] = k_gains[i] * (dq_d_last[i] - robot_state.dq[i]);
       }
 
       //return tau_d_calculated;
