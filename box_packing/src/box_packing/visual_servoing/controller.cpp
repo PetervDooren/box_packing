@@ -73,17 +73,6 @@ double constraintControl(const Constraint& c, Eigen::Vector3d position)
   return 0;
 }
 
-Eigen::VectorXd velocityControl(Eigen::VectorXd dq_d, Eigen::VectorXd dq)
-{
-  double K = 100;
-  Eigen::VectorXd tau(7); // hardcoded 7 joints for panda
-  for (int i=0; i<7; i++)
-  {
-    tau[i] = K* (dq_d[i] - dq[i]);
-  }
-  return tau;
-}
-
 ConstraintController::ConstraintController(const franka::Model& model): model_(model)
 {
   // within view constraints
@@ -167,8 +156,6 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     Eigen::VectorXd dq_d(7);
     auto COD = MJ.completeOrthogonalDecomposition();
     dq_d = COD.solve(constraint_velocity_reference);
-
-    std::cout << "desired_joint velocity: " << dq_d << std::endl;
 
     // joint velocity controller
     std::array<double, 7> dq_d_array{};
