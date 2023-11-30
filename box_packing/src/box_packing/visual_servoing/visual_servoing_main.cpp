@@ -10,6 +10,9 @@
 #include <franka/model.h>
 #include <franka/robot.h>
 #include "examples_common.h"
+#include <atomic>
+#include <mutex>
+#include <thread>
 
 #include "controller.h"
 
@@ -19,6 +22,9 @@ int main(int argc, char** argv) {
     std::cerr << "Usage: " << argv[0] << " <robot-hostname>" << std::endl;
     return -1;
   }
+
+  const double constraint_control_rate = 100.0;
+
   // Compliance parameters
   const double translational_stiffness{150.0};
   const double rotational_stiffness{10.0};
@@ -31,6 +37,22 @@ int main(int argc, char** argv) {
                                      Eigen::MatrixXd::Identity(3, 3);
   damping.bottomRightCorner(3, 3) << 2.0 * sqrt(rotational_stiffness) *
                                          Eigen::MatrixXd::Identity(3, 3);
+
+  // Initialize data fields for the shared memory.
+  struct {
+    std::mutex mutex;
+    bool has_data;
+    franka::RobotState robot_state;
+  } sm_robot_state{};
+  struct {
+    std::mutex mutex;
+    bool has_data;
+    std::array<double, 7> dq_d;
+  } sm_dq_d{};
+
+  std::atomic_bool running{true};
+  // forward declare thread
+  std::thread constraint_control_thread;
   try {
     // connect to robot
     franka::Robot robot(argv[1]);
@@ -50,16 +72,64 @@ int main(int argc, char** argv) {
                                {{100.0, 100.0, 100.0, 100.0, 100.0, 100.0}},
                                {{100.0, 100.0, 100.0, 100.0, 100.0, 100.0}});
 
-    // create controller
     ConstraintController controller(model);
     controller.SetDesiredPosition(position_d, orientation_d);
-    controller.SetStiffnessDamping(stiffness, damping);
+
+    // start constraint control thread.
+    constraint_control_thread = std::thread([constraint_control_rate, controller, &sm_robot_state, &sm_dq_d, &running]() {
+      while (running) {
+        // Sleep to achieve the desired print rate.
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(static_cast<int>((1.0 / constraint_control_rate * 1000.0))));
+          
+        franka::RobotState robot_state;
+        // Try to lock data to avoid read write collisions.
+        if (sm_robot_state.mutex.try_lock()) {
+          if (sm_robot_state.has_data) {
+            // read robot state data
+            robot_state = sm_robot_state.robot_state;
+            sm_robot_state.has_data = false;
+          }
+          sm_robot_state.mutex.unlock();
+        }
+        // calculate new joint velocity reference
+        std::array<double, 7> dq_d = controller.callback(robot_state);
+
+        // Try to lock data to avoid read write collisions.
+        if (sm_dq_d.mutex.try_lock()) {
+          sm_dq_d.dq_d = dq_d;
+          sm_dq_d.mutex.unlock();
+        }
+      }
+    });
 
     // define callback for the torque control loop
     std::function<franka::Torques(const franka::RobotState&, franka::Duration)>
         impedance_control_callback = [&](const franka::RobotState& robot_state,
                                          franka::Duration duration) -> franka::Torques {
-      return controller.callback(robot_state, duration);
+      if (sm_robot_state.mutex.try_lock()) {
+        if (sm_robot_state.has_data) {
+          // read robot state data
+          sm_robot_state.robot_state = robot_state;
+          sm_robot_state.has_data = true;
+        }
+        sm_robot_state.mutex.unlock();
+      }
+
+      std::array<double, 7> dq_d;
+      // Try to lock data to avoid read write collisions.
+      if (sm_dq_d.mutex.try_lock()) {
+        dq_d = sm_dq_d.dq_d;
+        sm_dq_d.mutex.unlock();
+      }
+
+      const std::array<double, 7> k_gains = {{600.0, 600.0, 600.0, 600.0, 250.0, 150.0, 50.0}};
+
+      std::array<double, 7> tau_d_calculated;
+      for (size_t i = 0; i < 7; i++) {
+        tau_d_calculated[i] = k_gains[i] * (dq_d[i] - robot_state.dq[i]) + coriolis[i];
+      }
+      return tau_d_calculated;
     };
     // start real-time control loop
     std::cout << "WARNING: Collision thresholds are set to high values. "
@@ -69,8 +139,13 @@ int main(int argc, char** argv) {
     std::cin.ignore();
     robot.control(impedance_control_callback);
   } catch (const franka::Exception& ex) {
+    running = false;
     // print exception
     std::cout << ex.what() << std::endl;
+  }
+
+  if (constraint_control_thread.joinable()) {
+    constraint_control_thread.join();
   }
   return 0;
 }

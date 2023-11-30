@@ -33,7 +33,7 @@ class ConstraintController{
         damping_ = damping;
     };
     
-    franka::Torques callback(const franka::RobotState& robot_state, franka::Duration duration);
+    std::array<double, 7> callback(const franka::RobotState& robot_state) const;
 
     private:
     const franka::Model& model_;

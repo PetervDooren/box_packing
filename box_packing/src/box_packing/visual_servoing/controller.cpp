@@ -102,7 +102,7 @@ ConstraintController::ConstraintController(const franka::Model& model): model_(m
   constraints_.push_back(Roty);
 }
 
-franka::Torques ConstraintController::callback(const franka::RobotState& robot_state, franka::Duration duration)
+std::array<double, 7> ConstraintController::callback(const franka::RobotState& robot_state) const
 {
     // get state variables
     std::array<double, 7> coriolis_array = model_.coriolis(robot_state);
@@ -170,13 +170,8 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
 
     std::cout << "desired_joint velocity: " << dq_d << std::endl;
 
-    Eigen::VectorXd tau_d(7);
-    tau_d = velocityControl(dq_d, dq);
-
-    std::cout << "desired_joint torque: " << tau_d << std::endl;
-
     // joint velocity controller
-    std::array<double, 7> tau_d_array{};
-    Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
-    return tau_d_array;
+    std::array<double, 7> dq_d_array{};
+    Eigen::VectorXd::Map(&dq_d_array[0], 7) = dq_d;
+    return dq_d_array;
 };
