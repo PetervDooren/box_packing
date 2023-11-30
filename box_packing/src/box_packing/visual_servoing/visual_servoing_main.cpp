@@ -75,6 +75,13 @@ int main(int argc, char** argv) {
     ConstraintController controller(model);
     controller.SetDesiredPosition(position_d, orientation_d);
 
+    // start real-time control loop
+    std::cout << "WARNING: Collision thresholds are set to high values. "
+              << "Make sure you have the user stop at hand!" << std::endl
+              << "After starting try to push the robot and see how it reacts." << std::endl
+              << "Press Enter to continue..." << std::endl;
+    std::cin.ignore();
+
     // start constraint control thread.
     constraint_control_thread = std::thread([constraint_control_rate, controller, &sm_robot_state, &sm_dq_d, &running]() {
       while (running) {
@@ -83,26 +90,31 @@ int main(int argc, char** argv) {
             std::chrono::milliseconds(static_cast<int>((1.0 / constraint_control_rate * 1000.0))));
           
         franka::RobotState robot_state;
+        bool newdata = false;
         // Try to lock data to avoid read write collisions.
         if (sm_robot_state.mutex.try_lock()) {
           if (sm_robot_state.has_data) {
             // read robot state data
             robot_state = sm_robot_state.robot_state;
             sm_robot_state.has_data = false;
+            newdata = true;
           }
           sm_robot_state.mutex.unlock();
         }
-        // calculate new joint velocity reference
-        std::array<double, 7> dq_d = controller.callback(robot_state);
+        if (newdata){
+          // calculate new joint velocity reference
+          std::array<double, 7> dq_d = controller.callback(robot_state);
 
-        // Try to lock data to avoid read write collisions.
-        if (sm_dq_d.mutex.try_lock()) {
-          sm_dq_d.dq_d = dq_d;
-          sm_dq_d.mutex.unlock();
+          // Try to lock data to avoid read write collisions.
+          if (sm_dq_d.mutex.try_lock()) {
+            sm_dq_d.dq_d = dq_d;
+            sm_dq_d.mutex.unlock();
+          }
         }
       }
     });
 
+    std::array<double, 7> dq_d_last = {0, 0, 0, 0, 0, 0, 0};
     // define callback for the torque control loop
     std::function<franka::Torques(const franka::RobotState&, franka::Duration)>
         impedance_control_callback = [&](const franka::RobotState& robot_state,
@@ -119,7 +131,11 @@ int main(int argc, char** argv) {
       std::array<double, 7> dq_d;
       // Try to lock data to avoid read write collisions.
       if (sm_dq_d.mutex.try_lock()) {
-        dq_d = sm_dq_d.dq_d;
+        if (sm_dq_d.has_data)
+        {
+          dq_d_last = sm_dq_d.dq_d;
+          sm_dq_d.has_data = false;
+        }
         sm_dq_d.mutex.unlock();
       }
 
@@ -127,16 +143,13 @@ int main(int argc, char** argv) {
 
       std::array<double, 7> tau_d_calculated;
       for (size_t i = 0; i < 7; i++) {
-        tau_d_calculated[i] = k_gains[i] * (dq_d[i] - robot_state.dq[i]) + coriolis[i];
+        tau_d_calculated[i] = k_gains[i] * (dq_d[i] - robot_state.dq[i]);
       }
-      return tau_d_calculated;
+
+      //return tau_d_calculated;
+      return {0, 0, 0, 0, 0, 0, 0}; // safety first
     };
-    // start real-time control loop
-    std::cout << "WARNING: Collision thresholds are set to high values. "
-              << "Make sure you have the user stop at hand!" << std::endl
-              << "After starting try to push the robot and see how it reacts." << std::endl
-              << "Press Enter to continue..." << std::endl;
-    std::cin.ignore();
+    
     robot.control(impedance_control_callback);
   } catch (const franka::Exception& ex) {
     running = false;
