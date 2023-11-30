@@ -73,6 +73,17 @@ double constraintControl(const Constraint& c, Eigen::Vector3d position)
   return 0;
 }
 
+Eigen::VectorXd velocityControl(Eigen::VectorXd dq_d, Eigen::VectorXd dq)
+{
+  double K = 100;
+  Eigen::VectorXd tau(7); // hardcoded 7 joints for panda
+  for (int i=0; i<7; i++)
+  {
+    tau[i] = K* (dq_d[i] - dq[i]);
+  }
+  return tau;
+}
+
 ConstraintController::ConstraintController(const franka::Model& model): model_(model)
 {
   // within view constraints
@@ -159,9 +170,13 @@ franka::Torques ConstraintController::callback(const franka::RobotState& robot_s
 
     std::cout << "desired_joint velocity: " << dq_d << std::endl;
 
-    std::cout << "desired_torque: " << dq_d << std::endl;
+    Eigen::VectorXd tau_d(7);
+    tau_d = velocityControl(dq_d, dq);
+
+    std::cout << "desired_joint torque: " << tau_d << std::endl;
 
     // joint velocity controller
     std::array<double, 7> tau_d_array{};
-    return {0, 0, 0, 0, 0, 0, 0};
+    Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
+    return tau_d_array;
 };
