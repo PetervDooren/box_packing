@@ -74,7 +74,7 @@ namespace my_panda_controller {
         }
 
         // configure controller
-        velocityController = VelocityController(model_handle_.get());
+        controller = ConstraintController(model_handle_.get());
 
         velocity_reference_sub = node_handle.subscribe("velocity_reference", 1, &MyController::velocity_reference_callback, this);
         velocity_pub = node_handle.advertise<geometry_msgs::Twist>("measured_velocity", 1);
@@ -108,7 +108,7 @@ namespace my_panda_controller {
             elapsed_time_ += period;
             //franka::RobotState robot_state = state_handle_->getRobotState();
 
-            std::array<double, 7> tau_d_input = velocityController.controlLaw(robot_state, period, desired_velocity);
+            std::array<double, 7> tau_d_input = controller.callback(robot_state);
 
             for (int i = 0; i < joint_handles_.size(); i++) {
                 joint_handles_[i].setCommand(tau_d_input[i]);

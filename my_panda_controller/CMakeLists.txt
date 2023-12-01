@@ -32,8 +32,11 @@ include_directories(
 
 add_library(my_controller_plugins
         src/rosfranka_test.cpp
-        src/velocity_controller.cpp)
+        #src/velocity_controller.cpp
+        src/controller.cpp)
+
 target_link_libraries(my_controller_plugins PUBLIC
         Franka::Franka
+        Threads::Threads
         ${catkin_LIBRARIES}
         )
