@@ -108,10 +108,13 @@ namespace my_panda_controller {
             elapsed_time_ += period;
             //franka::RobotState robot_state = state_handle_->getRobotState();
 
-            std::array<double, 7> tau_d_input = controller.callback(robot_state);
+            std::array<double, 7> dq_d = controller.callback(robot_state);
+
+            const std::array<double, 7> k_gains = {{50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0}};
 
             for (int i = 0; i < joint_handles_.size(); i++) {
-                joint_handles_[i].setCommand(tau_d_input[i]);
+                double tau_d = k_gains[i] * (dq_d[i] - dq[i]);
+                joint_handles_[i].setCommand(tau_d);
             }
         }
         else
