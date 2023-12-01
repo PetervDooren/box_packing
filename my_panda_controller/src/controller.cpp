@@ -94,6 +94,9 @@ ConstraintController::ConstraintController(franka_hw::FrankaModelHandle *model_h
   Roty.min = -0.1;
   Roty.max = 0.1;
   constraints_.push_back(Roty);
+
+  // hotfix to set the target position 
+  position_d_ << 1, 0, 0;
 }
 
 std::array<double, 7> ConstraintController::callback(const franka::RobotState& robot_state) const
