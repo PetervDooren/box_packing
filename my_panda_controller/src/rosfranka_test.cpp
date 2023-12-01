@@ -74,9 +74,8 @@ namespace my_panda_controller {
         }
 
         // configure controller
-        controller = ConstraintController(model_handle_.get());
+        controller = ConstraintController(node_handle, model_handle_.get());
 
-        velocity_reference_sub = node_handle.subscribe("velocity_reference", 1, &MyController::velocity_reference_callback, this);
         velocity_pub = node_handle.advertise<geometry_msgs::Twist>("measured_velocity", 1);
         trigger_service_ = node_handle.advertiseService("trigger", &MyController::trigger_callback, this);
 

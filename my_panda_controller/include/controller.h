@@ -13,6 +13,10 @@
 #include <franka_hw/franka_model_interface.h>
 #include <vector>
 
+#include <ros/ros.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
+
 
 struct Constraint{
     int id;
@@ -26,7 +30,7 @@ class ConstraintController{
 public:
     ConstraintController()= default;
 
-    explicit ConstraintController(franka_hw::FrankaModelHandle *model_handle);
+    explicit ConstraintController(ros::NodeHandle& node_handle, franka_hw::FrankaModelHandle *model_handle);
 
     void SetDesiredPosition(Eigen::Vector3d position_d)
     {
@@ -43,6 +47,8 @@ private:
     Eigen::Vector3d position_d_; // temp remove later
 
     std::vector<Constraint> constraints_;
+
+    ros::Publisher marker_publisher_;
 };
 
 #endif //BOX_PACKING_VELOCITY_CONTROLLER_H

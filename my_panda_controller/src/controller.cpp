@@ -1,3 +1,5 @@
+#include <geometry_msgs/Point.h>
+
 #include "controller.h"
 
 double evaluateConstraint(const Constraint& c, Eigen::Vector3d position)
@@ -76,7 +78,73 @@ double constraintControl(const Constraint& c, Eigen::Vector3d position)
   return 0;
 }
 
-ConstraintController::ConstraintController(franka_hw::FrankaModelHandle *model_handle)
+visualization_msgs::Marker createMarker(int id, const Constraint& constraint, double constraint_value)
+{
+  double r = 0.5; // radius in m
+
+  visualization_msgs::Marker marker;
+  marker.id = id;
+  marker.header.frame_id = "panda_EE";
+  marker.header.stamp = ros::Time();
+  marker.type = visualization_msgs::Marker::ARROW;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = 0.0;
+  marker.pose.position.y = 0.0;
+  marker.pose.position.z = 0.0;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+
+  // define arrow with two points
+  geometry_msgs::Point p1;
+  p1.x = 0.0;
+  p1.y = 0.0;
+  p1.z = r;
+  marker.points.push_back(p1);
+
+  if (constraint.direction == 1)
+  {
+    geometry_msgs::Point p2;
+    p2.x = 0.0;
+    p2.y = r*sin(constraint_value);
+    p2.z = r*cos(constraint_value);
+    marker.points.push_back(p2);
+  }
+  else if (constraint.direction == 2)
+  {
+    geometry_msgs::Point p2;
+    p2.x = r*sin(constraint_value);
+    p2.y = 0.0;
+    p2.z = r*cos(constraint_value);
+    marker.points.push_back(p2);
+  }
+  else
+  {
+    std::cout << "warning: constraint " << constraint.id << " has unknown direction " << constraint.direction << std::endl;
+  }
+
+  marker.scale.x = 0.01; // shaft diameter
+  marker.scale.y = 0.03; // head diameter
+  marker.scale.z = 0.01; // head length
+
+  if(constraint_value > constraint.min && constraint_value < constraint.max)
+  {
+    marker.color.a = 1.0;
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+  }
+  else {
+    marker.color.a = 1.0;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+  }
+  return marker;
+}
+
+ConstraintController::ConstraintController(ros::NodeHandle& node_handle, franka_hw::FrankaModelHandle *model_handle)
 {
   robot_model = model_handle;
 
@@ -97,6 +165,8 @@ ConstraintController::ConstraintController(franka_hw::FrankaModelHandle *model_h
 
   // hotfix to set the target position 
   position_d_ << 1, 0, 0;
+
+  marker_publisher_ = node_handle.advertise<visualization_msgs::MarkerArray>("constraints_visualization", 5);
 }
 
 std::array<double, 7> ConstraintController::callback(const franka::RobotState& robot_state) const
@@ -114,6 +184,8 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     Eigen::Vector3d position(transform.translation());
     Eigen::Quaterniond orientation(transform.linear());
 
+    visualization_msgs::MarkerArray marker_array;
+
     //std::cout << "euler angles: " << orientation.toRotationMatrix().eulerAngles(0, 1, 2) << std::endl;
 
     // get current vector of end effector to marker/box
@@ -126,12 +198,19 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     for (int i=0; i<constraints_.size(); i++){
       Constraint constraint = constraints_[i];
       double constraint_value = evaluateConstraint(constraint, position_box_ee_ee);
-      std::cout << "c" << constraint.id << ": " << constraint_value << std::endl; 
+      std::cout << "c" << constraint.id << ": " << constraint_value << std::endl;
+      
+      //visualization
+      visualization_msgs::Marker marker = createMarker(constraint.id, constraint, constraint_value);
+      marker_array.markers.push_back(marker);
+
       if(constraint_value > constraint.min && constraint_value < constraint.max)
         continue;
-      // constraint is not met. add to interaction matrix.
       active_constraint_index.push_back(i);
     }
+
+    // visualization
+    marker_publisher_.publish(marker_array);
 
     if (!active_constraint_index.size() > 0)
     {

@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /TF1/Status1
+        - /MarkerArray1
       Splitter Ratio: 0.5
     Tree Height: 746
   - Class: rviz/Selection
@@ -173,9 +173,11 @@ Visualization Manager:
       Visual Enabled: true
     - Class: ed_rviz_plugins/WorldModel
       Enabled: true
-      Entity Area label opacity: 0.4000000059604645
-      Entity Area opacity: 0.20000000298023224
+      Entity Volume label opacity: 0.4000000059604645
+      Entity Volume opacity: 0.20000000298023224
       Entity label opacity: 1
+      Exclude entities: ""
+      Exclude entity types: ""
       Exclude labels: ""
       Mesh query service name: ed/gui/query_meshes
       Name: WorldModel
@@ -185,10 +187,10 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /visualization_marker_array
+      Marker Topic: /my_controller/constraints_visualization
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
