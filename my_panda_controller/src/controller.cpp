@@ -232,7 +232,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
 
     // get current vector of end effector to marker/box
     Eigen::Vector3d position_box_ee_w = position_d_ - position; // position of the box with respect to the end effector in world frame
-    Eigen::Vector3d position_box_ee_ee = orientation.toRotationMatrix() * position_box_ee_w; // position of the box with respect to the end effector in endeffector frame
+    Eigen::Vector3d position_box_ee_ee = orientation.toRotationMatrix().inverse() * position_box_ee_w; // position of the box with respect to the end effector in endeffector frame
     std::cout << "pos in ee: " << position_box_ee_ee.x() << ", " << position_box_ee_ee.y() << ", " << position_box_ee_ee.z() << std::endl;
 
     //visualization
