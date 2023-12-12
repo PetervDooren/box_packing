@@ -140,11 +140,6 @@ namespace my_panda_controller {
             res.message = "MyController active has been set to False";
         return true;
     }
-
-    void MyController::velocity_reference_callback(const geometry_msgs::Twist &msg) {
-        desired_velocity = Eigen::Vector3d(msg.linear.x, msg.linear.y, msg.linear.z);
-    }
-
 }  // namespace my_panda_controllers
 
 PLUGINLIB_EXPORT_CLASS(my_panda_controller::MyController,

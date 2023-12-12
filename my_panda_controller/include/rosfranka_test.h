@@ -13,7 +13,6 @@
 #include <ros/node_handle.h>
 #include <ros/time.h>
 #include <std_srvs/Trigger.h>
-#include <geometry_msgs/Twist.h>
 
 #include "controller.h"
 
@@ -38,9 +37,6 @@ namespace my_panda_controller {
 
         // controller
         ConstraintController controller;
-        Eigen::Vector3d desired_velocity = Eigen::Vector3d(0,0,0);
-        ros::Subscriber velocity_reference_sub;
-        void velocity_reference_callback(const geometry_msgs::Twist &msg);
 
         //velocity publisher: needed for contact detection
         ros::Publisher velocity_pub;
