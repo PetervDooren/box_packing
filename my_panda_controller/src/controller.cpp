@@ -144,6 +144,47 @@ visualization_msgs::Marker createMarker(int id, const Constraint& constraint, do
   return marker;
 }
 
+visualization_msgs::Marker createObjMarker(int id, Eigen::Vector3d position)
+{
+  visualization_msgs::Marker marker;
+  marker.id = id;
+  marker.header.frame_id = "panda_EE";
+  marker.header.stamp = ros::Time();
+  marker.type = visualization_msgs::Marker::ARROW;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = 0.0;
+  marker.pose.position.y = 0.0;
+  marker.pose.position.z = 0.0;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+
+  // define arrow with two points
+  geometry_msgs::Point p1;
+  p1.x = 0.0;
+  p1.y = 0.0;
+  p1.z = 0.0;
+  marker.points.push_back(p1);
+
+  geometry_msgs::Point p2;
+  p2.x = position.x();
+  p2.y = position.y();
+  p2.z = position.z();
+  marker.points.push_back(p2);
+
+  marker.scale.x = 0.01; // shaft diameter
+  marker.scale.y = 0.03; // head diameter
+  marker.scale.z = 0.01; // head length
+
+  marker.color.a = 1.0;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+  marker.color.b = 0.0;
+  
+  return marker;
+}
+
 ConstraintController::ConstraintController(ros::NodeHandle& node_handle, franka_hw::FrankaModelHandle *model_handle)
 {
   robot_model = model_handle;
@@ -185,6 +226,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     Eigen::Quaterniond orientation(transform.linear());
 
     visualization_msgs::MarkerArray marker_array;
+    int marker_i = 0;
 
     //std::cout << "euler angles: " << orientation.toRotationMatrix().eulerAngles(0, 1, 2) << std::endl;
 
@@ -192,6 +234,11 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     Eigen::Vector3d position_box_ee_w = position_d_ - position; // position of the box with respect to the end effector in world frame
     Eigen::Vector3d position_box_ee_ee = orientation.toRotationMatrix() * position_box_ee_w; // position of the box with respect to the end effector in endeffector frame
     std::cout << "pos in ee: " << position_box_ee_ee.x() << ", " << position_box_ee_ee.y() << ", " << position_box_ee_ee.z() << std::endl;
+
+    //visualization
+    visualization_msgs::Marker marker = createObjMarker(marker_i, position_box_ee_ee);
+    marker_array.markers.push_back(marker);
+    marker_i++;
 
     std::vector<int> active_constraint_index;
     // evaluate constraints values
@@ -201,8 +248,9 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
       std::cout << "c" << constraint.id << ": " << constraint_value << std::endl;
       
       //visualization
-      visualization_msgs::Marker marker = createMarker(constraint.id, constraint, constraint_value);
+      visualization_msgs::Marker marker = createMarker(marker_i, constraint, constraint_value);
       marker_array.markers.push_back(marker);
+      marker_i++;
 
       if(constraint_value > constraint.min && constraint_value < constraint.max)
         continue;
