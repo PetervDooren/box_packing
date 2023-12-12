@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
     kdl_parser
     orocos_kdl
     visualization_msgs
+    franka_hw
     )
 
 find_package(Eigen3 REQUIRED NO_MODULE)
