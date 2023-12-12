@@ -9,6 +9,7 @@
 #include <hardware_interface/joint_command_interface.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
+#include <geometry_msgs/TwistStamped.h>
 
 namespace my_panda_controller {
 
@@ -76,7 +77,7 @@ namespace my_panda_controller {
         // configure controller
         controller = ConstraintController(node_handle, model_handle_.get());
 
-        velocity_pub = node_handle.advertise<geometry_msgs::Twist>("measured_velocity", 1);
+        velocity_pub = node_handle.advertise<geometry_msgs::TwistStamped>("measured_velocity", 1);
         trigger_service_ = node_handle.advertiseService("trigger", &MyController::trigger_callback, this);
 
         return true;
@@ -94,13 +95,14 @@ namespace my_panda_controller {
         Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(model_handle_->getZeroJacobian(franka::Frame::kEndEffector).data());
 
         Eigen::Matrix<double, 6, 1> velocity = jacobian * dq;
-        geometry_msgs::Twist measured_velocity;
-        measured_velocity.linear.x = velocity[0];
-        measured_velocity.linear.y = velocity[1];
-        measured_velocity.linear.z = velocity[2];
-        measured_velocity.angular.x = velocity[3];
-        measured_velocity.angular.y = velocity[4];
-        measured_velocity.angular.z = velocity[5];
+        geometry_msgs::TwistStamped measured_velocity;
+        measured_velocity.header.frame_id = "panda_link0";
+        measured_velocity.twist.linear.x = velocity[0];
+        measured_velocity.twist.linear.y = velocity[1];
+        measured_velocity.twist.linear.z = velocity[2];
+        measured_velocity.twist.angular.x = velocity[3];
+        measured_velocity.twist.angular.y = velocity[4];
+        measured_velocity.twist.angular.z = velocity[5];
         velocity_pub.publish(measured_velocity);
 
         if (active) {
