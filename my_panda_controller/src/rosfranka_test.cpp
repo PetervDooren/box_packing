@@ -75,6 +75,7 @@ namespace my_panda_controller {
         }
 
         // configure controller
+        shutdown_ = false;
         int worker_thread_frequency = 100;
         worker_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, worker_thread_frequency);
         controller = ConstraintController(node_handle, model_handle_.get());
@@ -152,11 +153,13 @@ namespace my_panda_controller {
     void MyController::workerThreadFunc(const float frequency)
     {
         //controller = ConstraintController(node_handle, model_handle_.get());
-
+        std::cout << "worker thread go brrr!" << std::endl;
         ros::Rate r(frequency);
         while(!shutdown_)
         {
+            std::cout << "worker thread ping" << std::endl;
             if (active) {
+                std::cout << "worker thread active ping" << std::endl;
                 franka::RobotState robot_state;
                 bool newdata = false;
                 // Try to lock data to avoid read write collisions.
@@ -190,6 +193,7 @@ namespace my_panda_controller {
             }
             r.sleep();
         }
+        std::cout << "worker thread goodbye" << std::endl;
     }
 
     void MyController::stopping(const ros::Time& /*time*/) {
