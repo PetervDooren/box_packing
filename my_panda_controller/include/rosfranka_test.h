@@ -14,7 +14,23 @@
 #include <ros/time.h>
 #include <std_srvs/Trigger.h>
 
+#include <mutex>
+#include <thread>
+
 #include "controller.h"
+
+// Initialize data fields for the shared memory.
+typedef struct {
+    std::mutex mutex;
+    bool has_data;
+    franka::RobotState robot_state;
+} sharedmem_robot_state;
+
+typedef struct {
+    std::mutex mutex;
+    bool has_data;
+    std::array<double, 7> dq_d;
+} sharedmem_dq_d;
 
 namespace my_panda_controller {
 
@@ -35,8 +51,16 @@ namespace my_panda_controller {
         std::vector<hardware_interface::JointHandle> joint_handles_;
         ros::Duration elapsed_time_;
 
-        // controller
+        // controller thread
+        sharedmem_dq_d sm_dq_d;
+        sharedmem_robot_state sm_robot_state;
+
         ConstraintController controller;
+        std::array<double, 7> dq_d = {0, 0, 0, 0, 0, 0, 0}; // zero order hold for dq_d
+        std::unique_ptr<std::thread> worker_thread_ptr_;
+        bool shutdown_; // Trigger to kill the worker thread
+
+        void workerThreadFunc(const float frequency);
 
         //velocity publisher: needed for contact detection
         ros::Publisher velocity_pub;
