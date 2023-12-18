@@ -85,10 +85,6 @@ namespace my_panda_controller {
     void MyController::starting(const ros::Time& /* time */) {
         //controller = ConstraintController(node_handle, model_handle_.get());
         std::cout << "controller starting" << std::endl;
-        // join previous thread if active
-        shutdown_ = true;
-        if (worker_thread_ptr_)
-            worker_thread_ptr_->join();
 
         elapsed_time_ = ros::Duration(0.0);
         // configure controller
@@ -164,7 +160,6 @@ namespace my_panda_controller {
         ros::Rate r(frequency);
         while(!shutdown_)
         {
-            std::cout << "worker thread ping" << std::endl;
             if (active) {
                 std::cout << "worker thread active ping" << std::endl;
                 franka::RobotState robot_state;
