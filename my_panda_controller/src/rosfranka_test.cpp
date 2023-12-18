@@ -74,10 +74,6 @@ namespace my_panda_controller {
             return false;
         }
 
-        // configure controller
-        shutdown_ = false;
-        int worker_thread_frequency = 100;
-        worker_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, worker_thread_frequency);
         controller = ConstraintController(node_handle, model_handle_.get());
 
         velocity_pub = node_handle.advertise<geometry_msgs::TwistStamped>("measured_velocity", 1);
@@ -87,7 +83,18 @@ namespace my_panda_controller {
     }
 
     void MyController::starting(const ros::Time& /* time */) {
+        //controller = ConstraintController(node_handle, model_handle_.get());
+        std::cout << "controller starting" << std::endl;
+        // join previous thread if active
+        shutdown_ = true;
+        if (worker_thread_ptr_)
+            worker_thread_ptr_->join();
+
         elapsed_time_ = ros::Duration(0.0);
+        // configure controller
+        shutdown_ = false;
+        int worker_thread_frequency = 100;
+        worker_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, worker_thread_frequency);
     }
 
     void MyController::update(const ros::Time& /* time */,
@@ -200,6 +207,7 @@ namespace my_panda_controller {
         // WARNING: DO NOT SEND ZERO VELOCITIES HERE AS IN CASE OF ABORTING DURING MOTION
         // A JUMP TO ZERO WILL BE COMMANDED PUTTING HIGH LOADS ON THE ROBOT. LET THE DEFAULT
         // BUILT-IN STOPPING BEHAVIOR SLOW DOWN THE ROBOT.
+        std::cout << "controller stopping" << std::endl;
         shutdown_ = true;
         if (worker_thread_ptr_)
             worker_thread_ptr_->join();
