@@ -11,6 +11,8 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TwistStamped.h>
 
+#include "data_saver.h"
+
 namespace my_panda_controller {
 
     bool MyController::init(hardware_interface::RobotHW* robot_hardware,
@@ -158,6 +160,9 @@ namespace my_panda_controller {
         //controller = ConstraintController(node_handle, model_handle_.get());
         std::cout << "worker thread go brrr!" << std::endl;
         ros::Rate r(frequency);
+        DataSaver data_saver;
+        data_saver.openfile();
+
         while(!shutdown_)
         {
             if (active) {
@@ -192,9 +197,13 @@ namespace my_panda_controller {
                         std::cout << "could not write dq_d" << std::endl;
                     }
                 }
+
+                // write to file
+                data_saver.write(robot_state);
             }
             r.sleep();
         }
+        data_saver.closefile();
         std::cout << "worker thread goodbye" << std::endl;
     }
 
