@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(Franka REQUIRED)
+find_package(OpenCV REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -30,16 +31,18 @@ include_directories(
         include
     ${catkin_INCLUDE_DIRS}
     ${Eigen_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
     )
 
 add_library(my_controller_plugins
         src/rosfranka_test.cpp
-        #src/velocity_controller.cpp
         src/controller.cpp
-        src/data_saver.cpp)
+        src/data_saver.cpp
+        src/aruco_detector.cpp)
 
 target_link_libraries(my_controller_plugins PUBLIC
         Franka::Franka
         Threads::Threads
+        ${OpenCV_LIBS}
         ${catkin_LIBRARIES}
         )

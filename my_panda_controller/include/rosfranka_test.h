@@ -32,6 +32,13 @@ typedef struct {
     std::array<double, 7> dq_d;
 } sharedmem_dq_d;
 
+typedef struct {
+    std::mutex mutex;
+    bool has_data;
+    Eigen::Vector3d position_d;
+    Eigen::Quaterniond orientation;
+} sharedmem_pose_d;
+
 namespace my_panda_controller {
 
     class MyController : public controller_interface::MultiInterfaceController<
@@ -57,10 +64,13 @@ namespace my_panda_controller {
 
         ConstraintController controller;
         std::array<double, 7> dq_d = {0, 0, 0, 0, 0, 0, 0}; // zero order hold for dq_d
-        std::unique_ptr<std::thread> worker_thread_ptr_;
+        std::unique_ptr<std::thread> controller_thread_ptr_;
         bool shutdown_worker; // Trigger to kill the worker thread
-
         void workerThreadFunc(const float frequency);
+
+        // camera aruco detector thread
+        sharedmem_pose_d sm_pose_d;
+        std::unique_ptr<std::thread> camera_thread_ptr_;
 
         //velocity publisher: needed for contact detection
         ros::Publisher velocity_pub;

@@ -92,8 +92,8 @@ namespace my_panda_controller {
         elapsed_time_ = ros::Duration(0.0);
         // configure controller
         shutdown_worker = false;
-        int worker_thread_frequency = 100;
-        worker_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, worker_thread_frequency);
+        int controller_thread_frequency = 100;
+        controller_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, controller_thread_frequency);
     }
 
     void MyController::update(const ros::Time& /* time */,
@@ -214,8 +214,8 @@ namespace my_panda_controller {
         // BUILT-IN STOPPING BEHAVIOR SLOW DOWN THE ROBOT.
         std::cout << "controller stopping" << std::endl;
         shutdown_worker = true;
-        if (worker_thread_ptr_)
-            worker_thread_ptr_->join();
+        if (controller_thread_ptr_)
+            controller_thread_ptr_->join();
     }
 
     bool MyController::trigger_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res)
