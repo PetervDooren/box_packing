@@ -1,8 +1,32 @@
 #include "data_saver.h"
 
+#include <string.h>
+#include <time.h>
+
+
+// Get current date/time, format is YYYY-MM-DD-HH-mm-ss
+std::string currentDateTime()
+{
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buf[80];
+    tstruct = *localtime(&now);
+
+    // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
+    // for more information about date/time format
+    strftime(buf, sizeof(buf), "%Y-%m-%d-%H-%M-%S", &tstruct);
+
+    return buf;
+}
+
 void DataSaver::openfile()
 {
-    myfile.open ("data.csv");
+    // generate filepath
+    std::string homedir = getenv("HOME");
+    std::string filename = currentDateTime();
+    std::string path = homedir + "/" + filename + ".csv";
+
+    myfile.open(path);
     // time
     myfile << "timestamp" << ", ";
     // joint positions
