@@ -58,7 +58,7 @@ namespace my_panda_controller {
         ConstraintController controller;
         std::array<double, 7> dq_d = {0, 0, 0, 0, 0, 0, 0}; // zero order hold for dq_d
         std::unique_ptr<std::thread> worker_thread_ptr_;
-        bool shutdown_; // Trigger to kill the worker thread
+        bool shutdown_worker; // Trigger to kill the worker thread
 
         void workerThreadFunc(const float frequency);
 
@@ -68,6 +68,9 @@ namespace my_panda_controller {
         bool active = false;
         ros::ServiceServer trigger_service_;
         bool trigger_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res);
+
+        ros::ServiceServer shutdown_service_;
+        bool shutdown_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res);
     };
 
 }  // namespace my_panda_controller

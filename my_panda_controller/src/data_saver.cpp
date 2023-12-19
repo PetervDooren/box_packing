@@ -26,7 +26,6 @@ void DataSaver::openfile()
         myfile << "OTEE" << i << ", ";
     }
     myfile << "\n";
-    myfile.close();
 }
 
 void DataSaver::write(franka::RobotState state)
@@ -48,7 +47,6 @@ void DataSaver::write(franka::RobotState state)
     {
         myfile << state.tau_ext_hat_filtered[i] << i << ", ";
     }
-    myfile << "tau0" << "tau1" << "tau2" << "tau3" << "tau4" << "tau5" << "tau6";
     // EE position
     for (int i = 0; i< 16; i++)
     {

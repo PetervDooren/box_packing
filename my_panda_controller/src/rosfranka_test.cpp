@@ -80,6 +80,7 @@ namespace my_panda_controller {
 
         velocity_pub = node_handle.advertise<geometry_msgs::TwistStamped>("measured_velocity", 1);
         trigger_service_ = node_handle.advertiseService("trigger", &MyController::trigger_callback, this);
+        shutdown_service_ = node_handle.advertiseService("shutdown", &MyController::shutdown_callback, this);
 
         return true;
     }
@@ -90,7 +91,7 @@ namespace my_panda_controller {
 
         elapsed_time_ = ros::Duration(0.0);
         // configure controller
-        shutdown_ = false;
+        shutdown_worker = false;
         int worker_thread_frequency = 100;
         worker_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, worker_thread_frequency);
     }
@@ -163,12 +164,12 @@ namespace my_panda_controller {
         DataSaver data_saver;
         data_saver.openfile();
 
-        while(!shutdown_)
+        while(!shutdown_worker)
         {
             if (active) {
-                std::cout << "worker thread active ping" << std::endl;
-                franka::RobotState robot_state;
+                //std::cout << "worker thread active ping" << std::endl;
                 bool newdata = false;
+                franka::RobotState robot_state;
                 // Try to lock data to avoid read write collisions.
                 if (sm_robot_state.mutex.try_lock()) {
                     if (sm_robot_state.has_data) {
@@ -196,10 +197,10 @@ namespace my_panda_controller {
                     else {
                         std::cout << "could not write dq_d" << std::endl;
                     }
-                }
 
-                // write to file
-                data_saver.write(robot_state);
+                    // write to file
+                    data_saver.write(robot_state);
+                }
             }
             r.sleep();
         }
@@ -212,7 +213,7 @@ namespace my_panda_controller {
         // A JUMP TO ZERO WILL BE COMMANDED PUTTING HIGH LOADS ON THE ROBOT. LET THE DEFAULT
         // BUILT-IN STOPPING BEHAVIOR SLOW DOWN THE ROBOT.
         std::cout << "controller stopping" << std::endl;
-        shutdown_ = true;
+        shutdown_worker = true;
         if (worker_thread_ptr_)
             worker_thread_ptr_->join();
     }
@@ -225,6 +226,14 @@ namespace my_panda_controller {
             res.message = "MyController active has been set to True";
         else
             res.message = "MyController active has been set to False";
+        return true;
+    }
+
+    bool MyController::shutdown_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res)
+    {
+        shutdown_worker = true;
+        res.success = true;
+        res.message = "MyController shutting down worker thread";
         return true;
     }
 }  // namespace my_panda_controllers
