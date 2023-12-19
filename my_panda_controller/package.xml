@@ -14,6 +14,7 @@
     <depend>controller_interface</depend>
     <depend>kdl_parser</depend>
     <depend>orocos_kdl</depend>
+    <depend>franka_hw</depend>
 
     <export>
         <controller_interface plugin="${prefix}/plugin.xml" />

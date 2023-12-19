@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     kdl_parser
     orocos_kdl
+    visualization_msgs
+    franka_hw
     )
 
 find_package(Eigen3 REQUIRED NO_MODULE)
@@ -32,8 +34,12 @@ include_directories(
 
 add_library(my_controller_plugins
         src/rosfranka_test.cpp
-        src/velocity_controller.cpp)
+        #src/velocity_controller.cpp
+        src/controller.cpp
+        src/data_saver.cpp)
+
 target_link_libraries(my_controller_plugins PUBLIC
         Franka::Franka
+        Threads::Threads
         ${catkin_LIBRARIES}
         )

@@ -9,6 +9,9 @@
 #include <hardware_interface/joint_command_interface.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
+#include <geometry_msgs/TwistStamped.h>
+
+#include "data_saver.h"
 
 namespace my_panda_controller {
 
@@ -73,18 +76,24 @@ namespace my_panda_controller {
             return false;
         }
 
-        // configure controller
-        velocityController = VelocityController(model_handle_.get());
+        controller = ConstraintController(node_handle, model_handle_.get());
 
-        velocity_reference_sub = node_handle.subscribe("velocity_reference", 1, &MyController::velocity_reference_callback, this);
-        velocity_pub = node_handle.advertise<geometry_msgs::Twist>("measured_velocity", 1);
+        velocity_pub = node_handle.advertise<geometry_msgs::TwistStamped>("measured_velocity", 1);
         trigger_service_ = node_handle.advertiseService("trigger", &MyController::trigger_callback, this);
+        shutdown_service_ = node_handle.advertiseService("shutdown", &MyController::shutdown_callback, this);
 
         return true;
     }
 
     void MyController::starting(const ros::Time& /* time */) {
+        //controller = ConstraintController(node_handle, model_handle_.get());
+        std::cout << "controller starting" << std::endl;
+
         elapsed_time_ = ros::Duration(0.0);
+        // configure controller
+        shutdown_worker = false;
+        int worker_thread_frequency = 100;
+        worker_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, worker_thread_frequency);
     }
 
     void MyController::update(const ros::Time& /* time */,
@@ -95,23 +104,48 @@ namespace my_panda_controller {
         Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(model_handle_->getZeroJacobian(franka::Frame::kEndEffector).data());
 
         Eigen::Matrix<double, 6, 1> velocity = jacobian * dq;
-        geometry_msgs::Twist measured_velocity;
-        measured_velocity.linear.x = velocity[0];
-        measured_velocity.linear.y = velocity[1];
-        measured_velocity.linear.z = velocity[2];
-        measured_velocity.angular.x = velocity[3];
-        measured_velocity.angular.y = velocity[4];
-        measured_velocity.angular.z = velocity[5];
+        geometry_msgs::TwistStamped measured_velocity;
+        measured_velocity.header.frame_id = "panda_link0";
+        measured_velocity.twist.linear.x = velocity[0];
+        measured_velocity.twist.linear.y = velocity[1];
+        measured_velocity.twist.linear.z = velocity[2];
+        measured_velocity.twist.angular.x = velocity[3];
+        measured_velocity.twist.angular.y = velocity[4];
+        measured_velocity.twist.angular.z = velocity[5];
         velocity_pub.publish(measured_velocity);
 
         if (active) {
+            if (sm_robot_state.mutex.try_lock()) {
+                // read robot state data
+                sm_robot_state.robot_state = robot_state;
+                sm_robot_state.has_data = true;
+                sm_robot_state.mutex.unlock();
+            }
+
+            // Try to lock data to avoid read write collisions.
+            if (sm_dq_d.mutex.try_lock()) {
+                if (sm_dq_d.has_data)
+                {
+                    dq_d = sm_dq_d.dq_d;
+                    sm_dq_d.has_data = false;
+                    std::cout << "update dq_d to ";
+                    for (int i=0; i<7; i++)
+                        std::cout << dq_d[i] << ", ";
+                    std::cout << std::endl;
+                }
+                sm_dq_d.mutex.unlock();
+            }
+
             elapsed_time_ += period;
             //franka::RobotState robot_state = state_handle_->getRobotState();
 
-            std::array<double, 7> tau_d_input = velocityController.controlLaw(robot_state, period, desired_velocity);
+            //std::array<double, 7> dq_d = controller.callback(robot_state);
+
+            const std::array<double, 7> k_gains = {{50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0}};
 
             for (int i = 0; i < joint_handles_.size(); i++) {
-                joint_handles_[i].setCommand(tau_d_input[i]);
+                double tau_d = k_gains[i] * (dq_d[i] - dq[i]);
+                joint_handles_[i].setCommand(tau_d);
             }
         }
         else
@@ -122,10 +156,66 @@ namespace my_panda_controller {
         }
     }
 
+    void MyController::workerThreadFunc(const float frequency)
+    {
+        //controller = ConstraintController(node_handle, model_handle_.get());
+        std::cout << "worker thread go brrr!" << std::endl;
+        ros::Rate r(frequency);
+        DataSaver data_saver;
+        data_saver.openfile();
+
+        while(!shutdown_worker)
+        {
+            if (active) {
+                //std::cout << "worker thread active ping" << std::endl;
+                bool newdata = false;
+                franka::RobotState robot_state;
+                // Try to lock data to avoid read write collisions.
+                if (sm_robot_state.mutex.try_lock()) {
+                    if (sm_robot_state.has_data) {
+                        // read robot state data
+                        robot_state = sm_robot_state.robot_state;
+                        sm_robot_state.has_data = false;
+                        newdata = true;
+                    }
+                    sm_robot_state.mutex.unlock();
+                }
+                if (newdata){
+                    // calculate new joint velocity reference
+                    std::array<double, 7> dq_d = controller.callback(robot_state);
+                    /*std::cout << "constraint thread: dq_d: ";
+                    for (int i=0; i< 7; i++)
+                        std::cout << dq_d[i];
+                    std::cout << std::endl;*/
+
+                    // Try to lock data to avoid read write collisions.
+                    if (sm_dq_d.mutex.try_lock()) {
+                        sm_dq_d.dq_d = dq_d;
+                        sm_dq_d.has_data = true;
+                        sm_dq_d.mutex.unlock();
+                    }
+                    else {
+                        std::cout << "could not write dq_d" << std::endl;
+                    }
+
+                    // write to file
+                    data_saver.write(robot_state);
+                }
+            }
+            r.sleep();
+        }
+        data_saver.closefile();
+        std::cout << "worker thread goodbye" << std::endl;
+    }
+
     void MyController::stopping(const ros::Time& /*time*/) {
         // WARNING: DO NOT SEND ZERO VELOCITIES HERE AS IN CASE OF ABORTING DURING MOTION
         // A JUMP TO ZERO WILL BE COMMANDED PUTTING HIGH LOADS ON THE ROBOT. LET THE DEFAULT
         // BUILT-IN STOPPING BEHAVIOR SLOW DOWN THE ROBOT.
+        std::cout << "controller stopping" << std::endl;
+        shutdown_worker = true;
+        if (worker_thread_ptr_)
+            worker_thread_ptr_->join();
     }
 
     bool MyController::trigger_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res)
@@ -139,10 +229,13 @@ namespace my_panda_controller {
         return true;
     }
 
-    void MyController::velocity_reference_callback(const geometry_msgs::Twist &msg) {
-        desired_velocity = Eigen::Vector3d(msg.linear.x, msg.linear.y, msg.linear.z);
+    bool MyController::shutdown_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res)
+    {
+        shutdown_worker = true;
+        res.success = true;
+        res.message = "MyController shutting down worker thread";
+        return true;
     }
-
 }  // namespace my_panda_controllers
 
 PLUGINLIB_EXPORT_CLASS(my_panda_controller::MyController,
