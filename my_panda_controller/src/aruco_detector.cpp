@@ -15,7 +15,7 @@ ArucoDetector::ArucoDetector()
     p.start(config);
 }
 
-std::vector<float> ArucoDetector::getPose()
+bool ArucoDetector::getPose()
 {
     std::vector<float> poseVec;
 
@@ -324,7 +324,8 @@ std::vector<float> ArucoDetector::getPose()
     // Wacht op gebruikerstoets om het venster te sluiten
     //if (cv::waitKey(1) == 'q')
 
-    return poseVec;
+    //return poseVec;
+    return true;
 }
 
 /*

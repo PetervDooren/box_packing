@@ -12,6 +12,7 @@
 #include <geometry_msgs/TwistStamped.h>
 
 #include "data_saver.h"
+#include "aruco_detector.h"
 
 namespace my_panda_controller {
 
@@ -94,6 +95,11 @@ namespace my_panda_controller {
         shutdown_worker = false;
         int controller_thread_frequency = 100;
         controller_thread_ptr_ = std::make_unique<std::thread>(&MyController::workerThreadFunc, this, controller_thread_frequency);
+
+        // setup camera
+        int camera_thread_frequency = 30;
+        camera_thread_ptr_ = std::make_unique<std::thread>(&MyController::cameraThreadFunc, this, camera_thread_frequency);
+
     }
 
     void MyController::update(const ros::Time& /* time */,
@@ -206,6 +212,41 @@ namespace my_panda_controller {
         }
         data_saver.closefile();
         std::cout << "worker thread goodbye" << std::endl;
+    }
+
+    void MyController::cameraThreadFunc(const float frequency)
+    {
+        //controller = ConstraintController(node_handle, model_handle_.get());
+        std::cout << "camera thread go brrr!" << std::endl;
+        ros::Rate r(frequency);
+
+        ArucoDetector aruco_detector;
+
+        while(!shutdown_worker)
+        {
+            if (active) {
+                //std::cout << "camera thread active ping" << std::endl;
+                //try to get camera image
+                Eigen::Vector3d position;
+                Eigen::Quaterniond orientation;
+                bool newdata = aruco_detector.getPose();
+
+                if (newdata){
+                    // Try to lock data to avoid read write collisions.
+                    if (sm_pose_d.mutex.try_lock()) {
+                        //sm_pose_d.position = ;
+                        //sm_pose_d.orientation = ;
+                        sm_pose_d.has_data = true;
+                        sm_pose_d.mutex.unlock();
+                    }
+                    else {
+                        std::cout << "could not write pose_d" << std::endl;
+                    }
+                }
+            }
+            r.sleep();
+        }
+        std::cout << "camera thread goodbye" << std::endl;
     }
 
     void MyController::stopping(const ros::Time& /*time*/) {

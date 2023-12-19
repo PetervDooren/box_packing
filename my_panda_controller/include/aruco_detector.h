@@ -6,7 +6,7 @@
 class ArucoDetector{
     public:
     ArucoDetector();
-    std::vector<float> getPose();
+    bool getPose();
 
     private:
     rs2::pipeline p;

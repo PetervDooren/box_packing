@@ -35,7 +35,7 @@ typedef struct {
 typedef struct {
     std::mutex mutex;
     bool has_data;
-    Eigen::Vector3d position_d;
+    Eigen::Vector3d position;
     Eigen::Quaterniond orientation;
 } sharedmem_pose_d;
 
@@ -71,6 +71,7 @@ namespace my_panda_controller {
         // camera aruco detector thread
         sharedmem_pose_d sm_pose_d;
         std::unique_ptr<std::thread> camera_thread_ptr_;
+        void cameraThreadFunc(const float frequency);
 
         //velocity publisher: needed for contact detection
         ros::Publisher velocity_pub;
