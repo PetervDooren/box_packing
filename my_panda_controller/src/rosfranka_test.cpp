@@ -229,7 +229,7 @@ namespace my_panda_controller {
                 //try to get camera image
                 Eigen::Vector3d position;
                 Eigen::Quaterniond orientation;
-                bool newdata = aruco_detector.getPose();
+                bool newdata = aruco_detector.getPose(position, orientation);
 
                 if (newdata){
                     // Try to lock data to avoid read write collisions.

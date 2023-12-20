@@ -15,7 +15,7 @@ ArucoDetector::ArucoDetector()
     p.start(config);
 }
 
-bool ArucoDetector::getPose()
+bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orientation)
 {
     std::vector<float> poseVec;
 
@@ -32,17 +32,6 @@ bool ArucoDetector::getPose()
                        (void *)color_frame.get_data());
 
     // Detect markers
-
-    // std::vector<int> markerIds;
-    // std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
-    // cv::aruco::DetectorParameters detectorParams =
-    //     cv::aruco::DetectorParameters();
-    // cv::aruco::Dictionary dictionary =
-    //     cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-    // cv::aruco::ArucoDetector detector(dictionary, detectorParams);
-    // detector.detectMarkers(inputImage, markerCorners, markerIds,
-    //                        rejectedCandidates);
-
     std::vector<int> markerIds;
     std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
     cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
@@ -50,18 +39,8 @@ bool ArucoDetector::getPose()
     cv::aruco::detectMarkers(inputImage, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
 
     // Draw markers
-
     cv::Mat outputImage = inputImage.clone();
     cv::aruco::drawDetectedMarkers(outputImage, markerCorners, markerIds);
-
-    // Cameramatrix & distortion matrix: verkegen door checkerboard calibratie
-    // te doen, zie calibratie mapje
-    // cv::Mat cameraMatrix =
-    //     (cv::Mat_<float>(3, 3) << 991.6899044146527, 0, 749.3129464107503, 0,
-    //      970.1750217910793, 482.609418075871, 0.0, 0.0, 1.0);
-    // cv::Mat distCoeffs =
-    //     (cv::Mat_<float>(5, 1) << 0.1520171287384349, -0.1450585941447574,
-    //      0.04365948290341132, 0.04198055042210847, 0.05629158652386724);
 
     cv::Mat cameraMatrix =
         (cv::Mat_<float>(3, 3) << 606.7253166158411, 0, 328.5626555595404, 0,
@@ -112,18 +91,6 @@ bool ArucoDetector::getPose()
 
         cv::Mat rotationMatrix;
         cv::Rodrigues(rvec, rotationMatrix);
-        // double x_roll = atan2(rotationMatrix.at<double>(2, 1), rotationMatrix.at<double>(2, 2));
-        // double y_pitch = atan2(-rotationMatrix.at<double>(2, 0), sqrt(rotationMatrix.at<double>(2, 1) * rotationMatrix.at<double>(2, 1) + rotationMatrix.at<double>(2, 2) * rotationMatrix.at<double>(2, 2)));
-        // double z_yaw = atan2(rotationMatrix.at<double>(1, 0), rotationMatrix.at<double>(0, 0));
-
-        // double degrees_per_radian = 180.0 / M_PI; // Conversion factor
-        // double x_roll_deg = x_roll * degrees_per_radian;
-        // double y_pitch_deg = y_pitch * degrees_per_radian;
-        // double z_yaw_deg = z_yaw * degrees_per_radian;
-
-        // std::cout<<"X: " << x_roll_deg << std::endl;
-        // std::cout<<"Y: " << y_pitch_deg << std::endl;
-        // std::cout<<"Z: " << z_yaw_deg << std::endl;
 
         cv::Mat R_CA; //rotation matrix from aruco to camera: Frame_cam = R_CA * Frame_aruco
         cv::Rodrigues(rvec, R_CA);
@@ -131,16 +98,9 @@ bool ArucoDetector::getPose()
         cv::Mat rvec_des_cam_frame;
         cv::Mat tvec_desired = (cv::Mat_<double>(3, 1) << -markerSize/2, -markerSize/2, 0.30); // Desired rotation in ArUco frame
         cv::Mat tvec_des_cam_frame;
-        // cv::Vec3d tvec_desired(0.0,0.0,0.15); // In aruco frame
-        // cv::Vec3d rvec_desired(0.0,0.0,0.0); // In aruco frame
-        // cv::Vec3d rvec_des_cam_frame;
-        // cv::Vec3d tvec_des_cam_frame;
 
         rvec_des_cam_frame = R_CA*rvec_desired; // rotation of desired pose in camera frame
         tvec_des_cam_frame = R_CA*tvec_desired; // translation of aruco-desired_pose in camera_frame
-
-        // std::cout<< "Tvec: " << tvec - tvec_des_cam_frame << std::endl;
-        // std::cout<< "Rvec: " << rvec - rvec_des_cam_frame << std::endl;
 
         cv::Rodrigues(rvec - rvec_desired, rotationMatrix);
         double x_roll = atan2(rotationMatrix.at<double>(2, 1), rotationMatrix.at<double>(2, 2));
@@ -162,132 +122,59 @@ bool ArucoDetector::getPose()
         poseVec.push_back(x_roll);
         poseVec.push_back(y_pitch);
         poseVec.push_back(z_yaw);
-        // poseVec.push_back(distance_x_in_marker_frame);
-        // poseVec.push_back(distance_y_in_marker_frame);
-        // poseVec.push_back(distance_z_in_marker_frame);
         poseVec.push_back(tvec_diff.at<double>(0));
         poseVec.push_back(tvec_diff.at<double>(1));
         poseVec.push_back(tvec_diff.at<double>(2));
 
-
-
-        // cv::Mat rotation_matrix(3, 3, CV_64F);
-        // cv::Vec3d rvec2(x_roll, y_pitch, z_yaw);
-
-        // cv::Mat rvec_mat = cv::Mat(rvec2);
-        // cv::Rodrigues(rvec_mat, rotation_matrix);
-
-        // // Extract the Euler angles from the rotation matrix (optional)
-        // cv::Vec3d extracted_rvec;
-        // cv::Rodrigues(rotation_matrix, extracted_rvec);
-
-        // std::cout << "Rvec: " << rvec << " & " << "Rvec2: " << extracted_rvec << std::endl;
-
-
-        // if(x_roll_deg > 5 || x_roll_deg < -5){
-        //   std::cout << "Turn on X" << std::endl;
-        // }
-
-        // if(x_roll_deg > 5 || x_roll_deg < -5){
-        //   std::cout << "Turn on X: "<< x_roll_deg << std::endl;
-        // }
-
-        // if(y_pitch_deg > 5 || y_pitch_deg < -5){
-        //   std::cout << "Turn on Y: "<< y_pitch_deg << std::endl;
-        // }
-
-        // if(z_yaw_deg > 5 || z_yaw_deg < -5){
-        //   std::cout << "Turn on Z: "<< z_yaw_deg << std::endl;
-        // }
-
-            // Calculate the marker's position in the image center
+        // Calculate the marker's position in the image center
         cv::Point2f imageCenter(width / 2, height / 2);
         cv::Point2f markerCenter = (markerCorners[i][0] + markerCorners[i][2]) * 0.5;
 
-            // Calculate the displacement of the marker from the image center
+        // Calculate the displacement of the marker from the image center
         float displacementX = markerCenter.x - imageCenter.x;
         float displacementY = markerCenter.y - imageCenter.y;
       
         cv::circle(outputImage, imageCenter, 5, cv::Scalar(255, 0, 0), -1);
         cv::circle(outputImage, markerCenter, 5, cv::Scalar(0, 0, 255), -1);
 
-        // std::cout << "Disp X: " << displacementX << std::endl;
-        // std::cout << "Disp Y: " << displacementY << std::endl;
-       
-        // if (displacementX < 0){
-        //   std::cout << "Move to left" << std::endl;
+        //Determine if the robot should move closer or further away from aruco --> aruco should 'perfectly' fit in the 
+        int min_y_pixel = 480;
+        int max_y_pixel = 0;
+        cv::Point2f pl1;
+        cv::Point2f pl2;
 
-        //  } else if (displacementX > 0){
-        //     std::cout << "Move to right" << std::endl;
-        //   }
+        for (int i = 0; i<imagePoints.size(); i++){
 
-        //   else{
-        //     std::cout << "No movement" << std::endl;
-        //   }
-        
-
-        // if (displacementY< 0){
-        //   std::cout << "Move up" << std::endl;
-
-        //   } else if (displacementY > 0){
-        //     std::cout << "Move down" << std::endl;
-        //   }
-
-        //   else{
-        //     std::cout << "No movement" << std::endl;
-        //   }
-
-          //Determine if the robot should move closer or further away from aruco --> aruco should 'perfectly' fit in the 
-          int min_y_pixel = 480;
-          int max_y_pixel = 0;
-          cv::Point2f pl1;
-          cv::Point2f pl2;
-
-          for (int i = 0; i<imagePoints.size(); i++){
-
-              if(imagePoints[i].y > max_y_pixel){
-                max_y_pixel = imagePoints[i].y;
-                pl1.x=imagePoints[i].x;
-                pl1.y=imagePoints[i].y;
-              }
-              if(imagePoints[i].y < min_y_pixel){
-                min_y_pixel = imagePoints[i].y;
-                pl2.x = imagePoints[i].x;
-                pl2.y = imagePoints[i].y;
-              }             
-          }
+            if(imagePoints[i].y > max_y_pixel){
+              max_y_pixel = imagePoints[i].y;
+              pl1.x=imagePoints[i].x;
+              pl1.y=imagePoints[i].y;
+            }
+            if(imagePoints[i].y < min_y_pixel){
+              min_y_pixel = imagePoints[i].y;
+              pl2.x = imagePoints[i].x;
+              pl2.y = imagePoints[i].y;
+            }             
+        }
 
         cv::Point2f ptest(640-50,200);
         cv::circle(outputImage, ptest, 5, cv::Scalar(255, 0, 0), -1);
 
-        // cv::Point2f pl1(50, 50);
-        // cv::Point2f pl2(590, 50); 
         int thickness = 2; 
         
           // Line drawn using 8 connected 
           // Bresenham algorithm 
         cv::line(outputImage, pl1, pl2, cv::Scalar(255, 0, 0), thickness, cv::LINE_8); 
-        // // cv::line(outputImage, (590, 50), (590, 430), (0, 255, 0), 2);
-        // std::cout<< max_y_pixel << " & " << min_y_pixel << std::endl;
-          // if(max_y_pixel < 480-50 || min_y_pixel > 0+50){
-          //   std::cout << "Move closer" << std::endl;
-          // } // no else, since then the marker is not visible anymore
 
-          // std::cout<<max_y_pixel<< " & " << min_y_pixel << std::endl;
-
-          cv::Point2f psq1(50,50);
-          cv::Point2f psq2(50,430);
-          cv::Point2f psq3(590,430);
-          cv::Point2f psq4(590,50);
-          
-          cv::line(outputImage, psq1, psq2, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
-          cv::line(outputImage, psq2, psq3, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
-          cv::line(outputImage, psq3, psq4, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
-          cv::line(outputImage, psq4, psq1, cv::Scalar(0, 255, 0), thickness, cv::LINE_8); 
-
+        cv::Point2f psq1(50,50);
+        cv::Point2f psq2(50,430);
+        cv::Point2f psq3(590,430);
+        cv::Point2f psq4(590,50);
         
-        // cv::drawFrameAxes(outputImage, cameraMatrix, distCoeffs, rvec, tvec,
-        //                   markerSize * 0.5);
+        cv::line(outputImage, psq1, psq2, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
+        cv::line(outputImage, psq2, psq3, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
+        cv::line(outputImage, psq3, psq4, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
+        cv::line(outputImage, psq4, psq1, cv::Scalar(0, 255, 0), thickness, cv::LINE_8); 
 
         // Tekenen van markerpunten en assen op de uitvoerafbeelding
         // Oorspronkelijke hoekpunten van de marker
