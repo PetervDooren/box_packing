@@ -8,7 +8,6 @@ ArucoDetector::ArucoDetector()
 {
     // Create a Pipeline - this serves as a top-level API for streaming and
     // processing frames
-    rs2::pipeline p;
     rs2::config config;
     config.enable_stream(RS2_STREAM_COLOR,640, 480, RS2_FORMAT_BGR8,30); //IMPORTANT to calibrate the camera this way.......
     // Configure and start the pipeline
@@ -209,8 +208,7 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
     cv::imshow("out", outputImage);
 
     // Wacht op gebruikerstoets om het venster te sluiten
-    //if (cv::waitKey(1) == 'q')
-
+    cv::waitKey(1);
     //return poseVec;
     return true;
 }
