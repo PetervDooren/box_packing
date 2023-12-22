@@ -205,7 +205,7 @@ ConstraintController::ConstraintController(ros::NodeHandle& node_handle, franka_
   constraints_.push_back(Roty);
 
   // hotfix to set the target position 
-  position_d_ << 1, 0, 0;
+  position_d_ << 0, 0, 1;
 
   marker_publisher_ = node_handle.advertise<visualization_msgs::MarkerArray>("constraints_visualization", 5);
 }
@@ -232,8 +232,9 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
 
     // get current vector of end effector to marker/box
     Eigen::Vector3d position_box_ee_w = position_d_ - position; // position of the box with respect to the end effector in world frame
-    Eigen::Vector3d position_box_ee_ee = orientation.toRotationMatrix().inverse() * position_box_ee_w; // position of the box with respect to the end effector in endeffector frame
+    //Eigen::Vector3d position_box_ee_ee = orientation.toRotationMatrix().inverse() * position_box_ee_w; // position of the box with respect to the end effector in endeffector frame
     //std::cout << "pos in ee: " << position_box_ee_ee.x() << ", " << position_box_ee_ee.y() << ", " << position_box_ee_ee.z() << std::endl;
+    Eigen::Vector3d position_box_ee_ee = position_d_;
 
     //visualization
     visualization_msgs::Marker marker = createObjMarker(marker_i, position_box_ee_ee);

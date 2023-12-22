@@ -186,6 +186,15 @@ namespace my_panda_controller {
                     }
                     sm_robot_state.mutex.unlock();
                 }
+                if (sm_pose_d.mutex.try_lock()) {
+                    if (sm_pose_d.has_data) {
+                        // read robot state data
+                        controller.SetDesiredPosition(sm_pose_d.position);
+                        sm_pose_d.has_data = false;
+                        newdata = true;
+                    }
+                    sm_pose_d.mutex.unlock();
+                }
                 if (newdata){
                     // calculate new joint velocity reference
                     std::array<double, 7> dq_d = controller.callback(robot_state);
@@ -232,7 +241,7 @@ namespace my_panda_controller {
                 if (newdata){
                     // Try to lock data to avoid read write collisions.
                     if (sm_pose_d.mutex.try_lock()) {
-                        //sm_pose_d.position = ;
+                        sm_pose_d.position = position;
                         //sm_pose_d.orientation = ;
                         sm_pose_d.has_data = true;
                         sm_pose_d.mutex.unlock();
