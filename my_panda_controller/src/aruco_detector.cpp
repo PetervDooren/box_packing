@@ -124,18 +124,12 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
         visualization_msgs::Marker visual_marker = createMarker(i, rvec, tvec);
         marker_array.markers.push_back(visual_marker);
 
-        cv::Mat rotationMatrix;
-        cv::Rodrigues(rvec, rotationMatrix);
+        position[0] = tvec[0];
+        position[1] = tvec[1];
+        position[2] = tvec[2];
 
         // Calculate the marker's position in the image center
-        cv::Point2f imageCenter(width / 2, height / 2);
-        cv::Point2f markerCenter = (markerCorners[i][0] + markerCorners[i][2]) * 0.5;
-
-        // Calculate the displacement of the marker from the image center
-        float displacementX = markerCenter.x - imageCenter.x;
-        float displacementY = markerCenter.y - imageCenter.y;
-      
-        cv::circle(outputImage, imageCenter, 5, cv::Scalar(255, 0, 0), -1);
+        cv::Point2f markerCenter = (markerCorners[i][0] + markerCorners[i][2]) * 0.5;     
         cv::circle(outputImage, markerCenter, 5, cv::Scalar(0, 0, 255), -1);
 
         //Determine if the robot should move closer or further away from aruco --> aruco should 'perfectly' fit in the 
@@ -157,25 +151,11 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
               pl2.y = imagePoints[i].y;
             }             
         }
-
-        cv::Point2f ptest(640-50,200);
-        cv::circle(outputImage, ptest, 5, cv::Scalar(255, 0, 0), -1);
-
+        
+        // Line drawn using 8 connected 
+        // Bresenham algorithm
         int thickness = 2; 
-        
-          // Line drawn using 8 connected 
-          // Bresenham algorithm 
         cv::line(outputImage, pl1, pl2, cv::Scalar(255, 0, 0), thickness, cv::LINE_8); 
-
-        cv::Point2f psq1(50,50);
-        cv::Point2f psq2(50,430);
-        cv::Point2f psq3(590,430);
-        cv::Point2f psq4(590,50);
-        
-        cv::line(outputImage, psq1, psq2, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
-        cv::line(outputImage, psq2, psq3, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
-        cv::line(outputImage, psq3, psq4, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
-        cv::line(outputImage, psq4, psq1, cv::Scalar(0, 255, 0), thickness, cv::LINE_8); 
 
         // Tekenen van markerpunten en assen op de uitvoerafbeelding
         // Oorspronkelijke hoekpunten van de marker
@@ -185,11 +165,6 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
         cv::Point2f p3 = markerCorners[i][3];
 
         cv::circle(outputImage, p0, 5, cv::Scalar(255, 0, 0), -1);
-
-
-
-        tvec_sum.push_back(tvec);
-        rvec_sum.push_back(rvec);
       }
 
       std::vector<int> marker_idx;
@@ -207,6 +182,21 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
     }
 
     marker_publisher_.publish(marker_array);
+
+    cv::Point2f imageCenter(width / 2, height / 2);
+    cv::circle(outputImage, imageCenter, 5, cv::Scalar(255, 0, 0), -1);
+
+    // draw constraint region
+    cv::Point2f psq1(50,50);
+    cv::Point2f psq2(50,430);
+    cv::Point2f psq3(590,430);
+    cv::Point2f psq4(590,50);
+    int thickness = 2; 
+
+    cv::line(outputImage, psq1, psq2, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
+    cv::line(outputImage, psq2, psq3, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
+    cv::line(outputImage, psq3, psq4, cv::Scalar(0, 255, 0), thickness, cv::LINE_8);
+    cv::line(outputImage, psq4, psq1, cv::Scalar(0, 255, 0), thickness, cv::LINE_8); 
 
     // Toon de uitvoerafbeelding met gedetecteerde markers en assen
     cv::imshow("out", outputImage);
