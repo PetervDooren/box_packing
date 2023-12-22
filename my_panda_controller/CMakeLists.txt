@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(Franka REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(realsense2 REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -45,4 +46,5 @@ target_link_libraries(my_controller_plugins PUBLIC
         Threads::Threads
         ${OpenCV_LIBS}
         ${catkin_LIBRARIES}
+        realsense2
         )
