@@ -257,6 +257,8 @@ namespace my_panda_controller {
         shutdown_worker = true;
         if (controller_thread_ptr_)
             controller_thread_ptr_->join();
+        if (camera_thread_ptr_)
+            camera_thread_ptr_->join();
     }
 
     bool MyController::trigger_callback(std_srvs::TriggerRequest &req, std_srvs::TriggerResponse &res)
