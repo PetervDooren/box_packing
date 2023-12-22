@@ -5,9 +5,14 @@
 
 #include <Eigen/Dense>
 
+#include <ros/ros.h>
+
 class ArucoDetector{
     public:
-    ArucoDetector();
+    ArucoDetector()= default;
+
+    explicit ArucoDetector(ros::NodeHandle& node_handle);
+
     /** 
      * tries to get the pose of a marker in the frame of the camera 
      * @param position
@@ -22,4 +27,5 @@ class ArucoDetector{
     float markerSize = 0.10;
 
     bool visualize = true;
+    ros::Publisher marker_publisher_;
 };

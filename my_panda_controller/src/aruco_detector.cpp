@@ -4,7 +4,40 @@
 #include <opencv2/aruco.hpp>
 #include <Eigen/Geometry>
 
-ArucoDetector::ArucoDetector()
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
+
+visualization_msgs::Marker createMarker(int id, const cv::Vec3d rvec, const cv::Vec3d tvec)
+{
+  double r = 0.5; // radius in m
+
+  visualization_msgs::Marker marker;
+  marker.id = id;
+  marker.header.frame_id = "panda_EE";
+  marker.header.stamp = ros::Time();
+  marker.type = visualization_msgs::Marker::CUBE;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = tvec[0];
+  marker.pose.position.y = tvec[1];
+  marker.pose.position.z = tvec[2];
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+
+  marker.scale.x = 0.01; // shaft diameter
+  marker.scale.y = 0.01; // head diameter
+  marker.scale.z = 0.01; // head length
+
+  marker.color.a = 1.0;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+  marker.color.b = 0.0;
+  
+  return marker;
+}
+
+ArucoDetector::ArucoDetector(ros::NodeHandle& node_handle)
 {
     // Create a Pipeline - this serves as a top-level API for streaming and
     // processing frames
@@ -12,6 +45,8 @@ ArucoDetector::ArucoDetector()
     config.enable_stream(RS2_STREAM_COLOR,640, 480, RS2_FORMAT_BGR8,30); //IMPORTANT to calibrate the camera this way.......
     // Configure and start the pipeline
     p.start(config);
+
+    marker_publisher_ = node_handle.advertise<visualization_msgs::MarkerArray>("aruco_detections", 5);
 }
 
 bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orientation)
@@ -50,6 +85,9 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
          -0.0009197939963682129, 0.003442722249108425, -0.938625280999511);
     // float markerSize = 0.16; // Afmeting van Marker in m
 
+    // visualization
+    visualization_msgs::MarkerArray marker_array;
+
     if (!markerCorners.empty()) {
       std::vector<cv::Vec3d> tvec_sum;
       std::vector<cv::Vec3d> rvec_sum;
@@ -82,6 +120,9 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
         cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec,
                      tvec); // P_camera = RCA(rvec) * P_marker + t(tvec); RCA
                             // equals rotation matrix from aruco to camera
+
+        visualization_msgs::Marker visual_marker = createMarker(i, rvec, tvec);
+        marker_array.markers.push_back(visual_marker);
 
         cv::Mat rotationMatrix;
         cv::Rodrigues(rvec, rotationMatrix);
@@ -164,6 +205,8 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
     } else {
       std::cout << "No marker detected" << std::endl;
     }
+
+    marker_publisher_.publish(marker_array);
 
     // Toon de uitvoerafbeelding met gedetecteerde markers en assen
     cv::imshow("out", outputImage);

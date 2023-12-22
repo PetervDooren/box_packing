@@ -18,6 +18,7 @@
 #include <thread>
 
 #include "controller.h"
+#include "aruco_detector.h"
 
 // Initialize data fields for the shared memory.
 typedef struct {
@@ -69,6 +70,7 @@ namespace my_panda_controller {
         void workerThreadFunc(const float frequency);
 
         // camera aruco detector thread
+        ArucoDetector aruco_detector;
         sharedmem_pose_d sm_pose_d;
         std::unique_ptr<std::thread> camera_thread_ptr_;
         void cameraThreadFunc(const float frequency);

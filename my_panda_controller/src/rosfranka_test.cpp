@@ -12,7 +12,6 @@
 #include <geometry_msgs/TwistStamped.h>
 
 #include "data_saver.h"
-#include "aruco_detector.h"
 
 namespace my_panda_controller {
 
@@ -78,6 +77,7 @@ namespace my_panda_controller {
         }
 
         controller = ConstraintController(node_handle, model_handle_.get());
+        aruco_detector = ArucoDetector(node_handle);
 
         velocity_pub = node_handle.advertise<geometry_msgs::TwistStamped>("measured_velocity", 1);
         trigger_service_ = node_handle.advertiseService("trigger", &MyController::trigger_callback, this);
@@ -219,8 +219,6 @@ namespace my_panda_controller {
         //controller = ConstraintController(node_handle, model_handle_.get());
         std::cout << "camera thread go brrr!" << std::endl;
         ros::Rate r(frequency);
-
-        ArucoDetector aruco_detector;
 
         while(!shutdown_worker)
         {
