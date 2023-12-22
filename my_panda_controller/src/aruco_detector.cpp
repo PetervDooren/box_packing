@@ -66,18 +66,13 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
 
 
         // Convert 2D image points to the correct format
-        std::vector<cv::Point2f> imagePoints;
+        std::vector<cv::Point2f> imagePoints= markerCorners[i];
         std::vector<cv::Scalar> cornerColors = {
             cv::Scalar(255, 0, 0),  // Blue
             cv::Scalar(0, 255, 0),  // Green
             cv::Scalar(0, 0, 255),  // Red
             cv::Scalar(0, 255, 255) // Yellow
         };
-
-        for (const auto &corner : markerCorners[i]) {
-          imagePoints.push_back(corner);
-        }
-
 
         // check de GESCHREVEN documentatie en niet de uitgebeelde documentatie
         // Estimate pose using solvePnP
@@ -90,40 +85,6 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
 
         cv::Mat rotationMatrix;
         cv::Rodrigues(rvec, rotationMatrix);
-
-        cv::Mat R_CA; //rotation matrix from aruco to camera: Frame_cam = R_CA * Frame_aruco
-        cv::Rodrigues(rvec, R_CA);
-        cv::Mat rvec_desired = (cv::Mat_<double>(3, 1) << 0.0, 0.0, 0.0); // Desired rotation in ArUco frame
-        cv::Mat rvec_des_cam_frame;
-        cv::Mat tvec_desired = (cv::Mat_<double>(3, 1) << -markerSize/2, -markerSize/2, 0.30); // Desired rotation in ArUco frame
-        cv::Mat tvec_des_cam_frame;
-
-        rvec_des_cam_frame = R_CA*rvec_desired; // rotation of desired pose in camera frame
-        tvec_des_cam_frame = R_CA*tvec_desired; // translation of aruco-desired_pose in camera_frame
-
-        cv::Rodrigues(rvec - rvec_desired, rotationMatrix);
-        double x_roll = atan2(rotationMatrix.at<double>(2, 1), rotationMatrix.at<double>(2, 2));
-        double y_pitch = atan2(-rotationMatrix.at<double>(2, 0), sqrt(rotationMatrix.at<double>(2, 1) * rotationMatrix.at<double>(2, 1) + rotationMatrix.at<double>(2, 2) * rotationMatrix.at<double>(2, 2)));
-        double z_yaw = atan2(rotationMatrix.at<double>(1, 0), rotationMatrix.at<double>(0, 0));
-
-        double degrees_per_radian = 180.0 / M_PI; // Conversion factor
-        double x_roll_deg = x_roll * degrees_per_radian;
-        double y_pitch_deg = y_pitch * degrees_per_radian;
-        double z_yaw_deg = z_yaw * degrees_per_radian;
-
-        std::cout<<"X deg: " << x_roll_deg << std::endl;
-        std::cout<<"Y deg: " << y_pitch_deg << std::endl;
-        std::cout<<"Z deg: " << z_yaw_deg << std::endl;
-
-        cv::Mat tvec_diff = tvec - tvec_desired;
-        std::cout << "Tvec_ diff: " << tvec_diff << std::endl;
-
-        poseVec.push_back(x_roll);
-        poseVec.push_back(y_pitch);
-        poseVec.push_back(z_yaw);
-        poseVec.push_back(tvec_diff.at<double>(0));
-        poseVec.push_back(tvec_diff.at<double>(1));
-        poseVec.push_back(tvec_diff.at<double>(2));
 
         // Calculate the marker's position in the image center
         cv::Point2f imageCenter(width / 2, height / 2);

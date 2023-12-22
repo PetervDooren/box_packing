@@ -298,4 +298,4 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     std::array<double, 7> dq_d_array{};
     Eigen::VectorXd::Map(&dq_d_array[0], 7) = dq_d;
     return dq_d_array;
-};
+}
