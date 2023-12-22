@@ -23,7 +23,7 @@ class ArucoDetector{
 
     private:
     rs2::pipeline p;
-    int markerId = 42; // #TODO make configurable
+    int markerId = 43; // #TODO make configurable
     float markerSize = 0.10;
 
     bool visualize = true;

@@ -87,6 +87,7 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
 
     // visualization
     visualization_msgs::MarkerArray marker_array;
+    bool markerfound = false;
 
     if (!markerCorners.empty()) {
       std::vector<cv::Vec3d> tvec_sum;
@@ -121,12 +122,16 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
                      tvec); // P_camera = RCA(rvec) * P_marker + t(tvec); RCA
                             // equals rotation matrix from aruco to camera
 
+        if (markerIds[i] == markerId) {
+          position[0] = tvec[0];
+          position[1] = tvec[1];
+          position[2] = tvec[2];
+          markerfound = true;
+        }
+
+        // visualization
         visualization_msgs::Marker visual_marker = createMarker(i, rvec, tvec);
         marker_array.markers.push_back(visual_marker);
-
-        position[0] = tvec[0];
-        position[1] = tvec[1];
-        position[2] = tvec[2];
 
         // Calculate the marker's position in the image center
         cv::Point2f markerCenter = (markerCorners[i][0] + markerCorners[i][2]) * 0.5;     
@@ -166,17 +171,6 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
 
         cv::circle(outputImage, p0, 5, cv::Scalar(255, 0, 0), -1);
       }
-
-      std::vector<int> marker_idx;
-      //   int marker1 = 42;
-      //   int marker2 = 5;
-
-      for (int i = 0; i < markerCorners.size(); ++i) {
-        if (markerIds[i] == markerId) {
-          marker_idx.push_back(i);
-        }
-      }
-
     } else {
       std::cout << "No marker detected" << std::endl;
     }
@@ -204,7 +198,7 @@ bool ArucoDetector::getPose(Eigen::Vector3d& position, Eigen::Quaterniond& orien
     // Wacht op gebruikerstoets om het venster te sluiten
     cv::waitKey(1);
     //return poseVec;
-    return true;
+    return markerfound;
 }
 
 /*
