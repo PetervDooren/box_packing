@@ -24,7 +24,7 @@ class ArucoDetector{
     private:
     rs2::pipeline p;
     int markerId = 43; // #TODO make configurable
-    float markerSize = 0.10;
+    float markerSize = 0.057; // 5,7cm
 
     bool visualize = true;
     ros::Publisher marker_publisher_;
