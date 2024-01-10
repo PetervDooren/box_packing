@@ -134,10 +134,10 @@ namespace my_panda_controller {
                 {
                     dq_d = sm_dq_d.dq_d;
                     sm_dq_d.has_data = false;
-                    std::cout << "update dq_d to ";
-                    for (int i=0; i<7; i++)
-                        std::cout << dq_d[i] << ", ";
-                    std::cout << std::endl;
+                    //std::cout << "update dq_d to ";
+                    //for (int i=0; i<7; i++)
+                    //    std::cout << dq_d[i] << ", ";
+                    //std::cout << std::endl;
                 }
                 sm_dq_d.mutex.unlock();
             }
@@ -170,11 +170,18 @@ namespace my_panda_controller {
         DataSaver data_saver;
         data_saver.openfile(controller);
 
+        // timer for reference position
+        auto start = std::chrono::system_clock::now();
+        double timeout = 3.0; // seconds
+        bool controller_stopped = true; // stop controller
+
         while(!shutdown_worker)
         {
             if (active) {
                 //std::cout << "worker thread active ping" << std::endl;
-                bool newdata = false;
+                bool newrobotdata = false;
+                bool newcamdata = false;
+
                 franka::RobotState robot_state;
                 // Try to lock data to avoid read write collisions.
                 if (sm_robot_state.mutex.try_lock()) {
@@ -182,7 +189,7 @@ namespace my_panda_controller {
                         // read robot state data
                         robot_state = sm_robot_state.robot_state;
                         sm_robot_state.has_data = false;
-                        newdata = true;
+                        newrobotdata = true;
                     }
                     sm_robot_state.mutex.unlock();
                 }
@@ -191,17 +198,41 @@ namespace my_panda_controller {
                         // read robot state data
                         controller.SetDesiredPosition(sm_pose_d.position);
                         sm_pose_d.has_data = false;
-                        newdata = true;
+                        newcamdata = true;
                     }
                     sm_pose_d.mutex.unlock();
                 }
-                if (newdata){
+
+                // manage reference pose monitor
+                if (!newcamdata)
+                {
+                    if(!controller_stopped)
+                    {
+                        auto now = std::chrono::system_clock::now();
+                        std::chrono::duration<double> elapsed_seconds = now-start;
+                        if (elapsed_seconds.count() > timeout)
+                        {
+                            std::cout << "timeout of " << timeout << " exceeded with "<< elapsed_seconds.count() << ". stopping controller." << std::endl;
+                            controller_stopped = true;
+                            newcamdata = true; // trigger one update of the shared memory
+                        }
+                    }
+                }
+                else
+                {
+                    // reset timer
+                    start = std::chrono::system_clock::now();
+                    controller_stopped = false;
+                }
+
+                // control when new data is available
+                if (newcamdata || newrobotdata){
                     // calculate new joint velocity reference
-                    std::array<double, 7> dq_d = controller.callback(robot_state);
-                    /*std::cout << "constraint thread: dq_d: ";
-                    for (int i=0; i< 7; i++)
-                        std::cout << dq_d[i];
-                    std::cout << std::endl;*/
+                    std::array<double, 7> dq_d = {0, 0, 0, 0, 0, 0, 0};
+                    if (!controller_stopped)
+                        std::array<double, 7> dq_d = controller.callback(robot_state);
+                    else
+                        std::cout << "controller stopped" << std::endl;
 
                     // Try to lock data to avoid read write collisions.
                     if (sm_dq_d.mutex.try_lock()) {
