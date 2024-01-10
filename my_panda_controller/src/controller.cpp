@@ -214,8 +214,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
 {
     // get state variables
     std::array<double, 7> coriolis_array = robot_model->getCoriolis();
-    std::array<double, 42> jacobian_array =
-        robot_model->getZeroJacobian(franka::Frame::kEndEffector);
+    jacobian_array = robot_model->getZeroJacobian(franka::Frame::kEndEffector);
     // convert to Eigen
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> coriolis(coriolis_array.data());
     Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());

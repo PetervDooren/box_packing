@@ -44,6 +44,7 @@ public:
     std::vector<double> getconstraintValues() {return constraint_values;};
     std::vector<double> getconstraintVelReferences() {return constraint_velocity_reference_log;};
     std::array<double, 7> getDqLog() {return dq_log;};
+    std::array<double, 42> getJacobian() {return jacobian_array;};
 
 private:
     //const franka::Model& model_;
@@ -58,6 +59,7 @@ private:
     std::vector<double> constraint_values;
     std::vector<double> constraint_velocity_reference_log;
     std::array<double, 7> dq_log;
+    std::array<double, 42> jacobian_array;
 
     ros::Publisher marker_publisher_;
 };

@@ -71,6 +71,12 @@ void DataSaver::openfile(ConstraintController& controller)
         myfile << "dq_d" << i << ", ";
     }
 
+    // Jacobian
+    for (int i = 0; i< 42; i++)
+    {
+        myfile << "J" << i << ", ";
+    }
+
     myfile << "\n";
 }
 
@@ -123,6 +129,13 @@ void DataSaver::write(franka::RobotState& state, ConstraintController& controlle
         myfile << dq_d[i] << ", ";
     }
     
+    // Jacobian
+    std::array<double, 42> J = controller.getJacobian();
+    for (int i = 0; i< 42; i++)
+    {
+        myfile << J[i] << ", ";
+    }
+
     // ENDLINE
     myfile << "\n";
 }
