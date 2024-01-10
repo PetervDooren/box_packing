@@ -36,6 +36,7 @@ public:
     {
         position_d_ = position_d;
     };
+    Eigen::Vector3d getDesiredPosition(){return position_d_;};
     
     std::array<double, 7> callback(const franka::RobotState& robot_state);
 

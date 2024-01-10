@@ -50,6 +50,10 @@ void DataSaver::openfile(ConstraintController& controller)
         myfile << "OTEE" << i << ", ";
     }
 
+
+    // reference point
+    myfile << "point_dx, point_dy, point_dz, ";
+
     // constraint values + ref
     std::vector<Constraint> constraints = controller.getconstraints();
     for (int i = 0; i<constraints.size(); i++)
@@ -97,6 +101,10 @@ void DataSaver::write(franka::RobotState& state, ConstraintController& controlle
     }
 
     // CONTROLLER STATE
+    // reference position
+    Eigen::Vector3d position_d = controller.getDesiredPosition();
+    myfile << position_d.x() << ", " << position_d.y() << ", " << position_d.z() << ", ";
+
     // constraint values + ref
     std::vector<double> constraint_values = controller.getconstraintValues();
     for (int i = 0; i<constraint_values.size(); i++)
