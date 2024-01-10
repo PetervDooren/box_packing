@@ -168,7 +168,7 @@ namespace my_panda_controller {
         std::cout << "worker thread go brrr!" << std::endl;
         ros::Rate r(frequency);
         DataSaver data_saver;
-        data_saver.openfile();
+        data_saver.openfile(controller);
 
         while(!shutdown_worker)
         {
@@ -214,7 +214,7 @@ namespace my_panda_controller {
                     }
 
                     // write to file
-                    data_saver.write(robot_state);
+                    data_saver.write(robot_state, controller);
                 }
             }
             r.sleep();
