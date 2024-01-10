@@ -19,7 +19,7 @@ std::string currentDateTime()
     return buf;
 }
 
-void DataSaver::openfile()
+void DataSaver::openfile(ConstraintController& controller)
 {
     // generate filepath
     std::string homedir = getenv("HOME");
@@ -49,11 +49,30 @@ void DataSaver::openfile()
     {
         myfile << "OTEE" << i << ", ";
     }
+
+    // constraint values + ref
+    std::vector<Constraint> constraints = controller.getconstraints();
+    for (int i = 0; i<constraints.size(); i++)
+    {
+        myfile << "constraint_" << constraints[i].id << "_value, ";
+    }
+    for (int i = 0; i<constraints.size(); i++)
+    {
+        myfile << "constraint_" << constraints[i].id << "_velocity_reference, ";
+    }
+
+    // dq_desired
+    for (int i = 0; i< 7; i++)
+    {
+        myfile << "dq_d" << i << ", ";
+    }
+
     myfile << "\n";
 }
 
-void DataSaver::write(franka::RobotState state)
+void DataSaver::write(franka::RobotState& state, ConstraintController& controller)
 {
+    // ROBOT STATE
     // time
     myfile << state.time.toSec() << ", ";
     // joint positions
@@ -76,6 +95,27 @@ void DataSaver::write(franka::RobotState state)
     {
         myfile << state.O_T_EE[i] << ", ";
     }
+
+    // CONTROLLER STATE
+    // constraint values + ref
+    std::vector<double> constraint_values = controller.getconstraintValues();
+    for (int i = 0; i<constraint_values.size(); i++)
+    {
+        myfile << constraint_values[i] << ", ";
+    }
+    std::vector<double> constraint_vel_refs = controller.getconstraintVelReferences();
+    for (int i = 0; i<constraint_vel_refs.size(); i++)
+    {
+        myfile << constraint_vel_refs[i] << ", ";
+    }
+    std::array<double, 7> dq_d = controller.getDqLog();
+    // dq_desired
+    for (int i = 0; i< 7; i++)
+    {
+        myfile << dq_d[i] << ", ";
+    }
+    
+    // ENDLINE
     myfile << "\n";
 }
 

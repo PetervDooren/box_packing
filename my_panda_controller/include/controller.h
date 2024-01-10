@@ -37,7 +37,12 @@ public:
         position_d_ = position_d;
     };
     
-    std::array<double, 7> callback(const franka::RobotState& robot_state) const;
+    std::array<double, 7> callback(const franka::RobotState& robot_state);
+
+    std::vector<Constraint> getconstraints() {return constraints_;};
+    std::vector<double> getconstraintValues() {return constraint_values;};
+    std::vector<double> getconstraintVelReferences() {return constraint_velocity_reference_log;};
+    std::array<double, 7> getDqLog() {return dq_log;};
 
 private:
     //const franka::Model& model_;
@@ -47,6 +52,11 @@ private:
     Eigen::Vector3d position_d_; // temp remove later
 
     std::vector<Constraint> constraints_;
+
+    // logging
+    std::vector<double> constraint_values;
+    std::vector<double> constraint_velocity_reference_log;
+    std::array<double, 7> dq_log;
 
     ros::Publisher marker_publisher_;
 };

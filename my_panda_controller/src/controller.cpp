@@ -210,7 +210,7 @@ ConstraintController::ConstraintController(ros::NodeHandle& node_handle, franka_
   marker_publisher_ = node_handle.advertise<visualization_msgs::MarkerArray>("constraints_visualization", 5);
 }
 
-std::array<double, 7> ConstraintController::callback(const franka::RobotState& robot_state) const
+std::array<double, 7> ConstraintController::callback(const franka::RobotState& robot_state)
 {
     // get state variables
     std::array<double, 7> coriolis_array = robot_model->getCoriolis();
@@ -240,11 +240,16 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     marker_array.markers.push_back(marker);
     marker_i++;
 
+    //logging
+    constraint_values = std::vector<double>(constraints_.size(), 0);
+    constraint_velocity_reference_log = std::vector<double>(constraints_.size(), 0);
+
     std::vector<int> active_constraint_index;
     // evaluate constraints values
     for (int i=0; i<constraints_.size(); i++){
       Constraint constraint = constraints_[i];
       double constraint_value = evaluateConstraint(constraint, position_box_ee_ee);
+      constraint_values[i] = constraint_value; // logging
       //std::cout << "c" << constraint.id << ": " << constraint_value << std::endl;
       
       //visualization
@@ -263,6 +268,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     if (!active_constraint_index.size() > 0)
     {
       std::cout << "no active constraints " << active_constraint_index.size() << std::endl;
+      dq_log = {0, 0, 0, 0, 0, 0, 0};
       return {0, 0, 0, 0, 0, 0, 0};
     }
 
@@ -281,6 +287,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
       interaction_matrix.row(i) << derivative;
 
       constraint_velocity_reference(i) = constraintControl(constraint, position_box_ee_ee);
+      constraint_velocity_reference_log[active_constraint_index[i]] = constraint_velocity_reference(i);
     }
     //std::cout << "interaction matrix: " << std:: endl << interaction_matrix << std::endl;
     //std::cout << "constraint velocity reference: " << constraint_velocity_reference << std::endl;
@@ -297,5 +304,6 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     // joint velocity controller
     std::array<double, 7> dq_d_array{};
     Eigen::VectorXd::Map(&dq_d_array[0], 7) = dq_d;
+    dq_log = dq_d_array;
     return dq_d_array;
 };
