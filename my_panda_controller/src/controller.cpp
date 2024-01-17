@@ -6,10 +6,10 @@ double evaluateConstraint(const Constraint& c, Eigen::Vector3d position)
 {
   switch(c.direction){
     case 1: // get rotation about the x axis
-      return atan(position.y()/position.z());
+      return atan2(position.y(),position.z());
       break;
     case 2: // get rotation about the y axis
-      return atan(position.x()/position.z());
+      return atan2(position.x(),position.z());
       break;
     default:
       std::cerr << "invalid constraint direction: " << c.direction << std::endl;
