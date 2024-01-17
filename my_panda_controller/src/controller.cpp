@@ -24,33 +24,52 @@ double evaluateConstraint(const Constraint& c, Eigen::Vector3d position)
 Eigen::VectorXd getConstraintDirection(const Constraint& c, Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
   Eigen::VectorXd derivative(6);
+
+  // calculate drdtwist
+  Eigen::Matrix<double, 3,3> R21; // rotation matrix from fixed frame(1) to end effector(2)
+  R21 = orientation.toRotationMatrix().transpose();
+
+  Eigen::Matrix3d omegax;
+  omegax << 0, 0, 0,
+            0, 0, -1,
+            0, 1, 0;
+  Eigen::Matrix3d omegay;
+  omegay << 0, 0, 1,
+            0, 0, 0,
+            -1, 0, 0;
+  Eigen::Matrix3d omegaz;
+  omegaz << 0, -1, 0,
+            1, 0, 0,
+            0, 0, 0;
+  
+  Eigen::Vector3d drdomegax = - R21 * omegax * R21.transpose() * position;
+  Eigen::Vector3d drdomegay = - R21 * omegay * R21.transpose() * position;
+  Eigen::Vector3d drdomegaz = - R21 * omegaz * R21.transpose() * position;
+
+  // fill matrix
+  Eigen::Matrix<double, 3, 6> drdtwist;
+  drdtwist.block(0,0,3,3) << -R21;
+  drdtwist.col(3) << drdomegax;
+  drdtwist.col(4) << drdomegay;
+  drdtwist.col(5) << drdomegaz; 
+
   switch(c.direction){
     case 1: // get rotation about the x axis
     {
       //value = atan(position.y()/position.z());
-      // position component
-      Eigen::Vector3d dydPe; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
-      //dydPe << 0, 1/position.z(), -position.y()/(position.z()*position.z());
-      dydPe << 0, 0, 0;
-      derivative.head(3) << orientation.toRotationMatrix().transpose() * dydPe;
-      // orientation component
-      Eigen::Vector3d dydRe; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
-      dydRe << 1, 0, 0;
-      derivative.tail(3) << orientation.toRotationMatrix().transpose() * dydRe;
+      Eigen::Vector3d dydr; // constraint feature function differentiated w.r.t. the pose of the target in the end effector frame.
+      double c = 1/(1+pow(position.y()/position.z(),2));
+      dydr << 0, c/position.z(), -c*position.y()/pow(position.z(),2);
+      derivative = drdtwist.transpose()*dydr;
       break;
     }
     case 2: // get rotation about the y axis
     {
       //value = atan(position.x()/position.z());
-      // position component
-      Eigen::Vector3d dydPe; // constraint feature function differentiated w.r.t. the pose of the end effector in its own frame.
-      //dydPe << 0, 1/position.z(), -position.x()/(position.z()*position.z());
-      dydPe << 0, 0, 0;
-      derivative.head(3) << orientation.toRotationMatrix().transpose() * dydPe;
-      // orientation component
-      Eigen::Vector3d dydRe; // the relation between the constraint feature function and the end effector rotational velocity expressed in its own frame.
-      dydRe << 0, -1, 0;
-      derivative.tail(3) << orientation.toRotationMatrix().transpose() * dydRe;
+      Eigen::Vector3d dydr; // constraint feature function differentiated w.r.t. the pose of the target in the end effector frame.
+      double c = 1/(1+pow(position.x()/position.z(),2));
+      dydr << 0, c/position.z(), -c*position.x()/pow(position.z(),2);
+      derivative = drdtwist.transpose()*dydr;
       break;
     }
     default:
