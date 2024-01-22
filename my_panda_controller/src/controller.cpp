@@ -68,7 +68,7 @@ Eigen::VectorXd getConstraintDirection(const Constraint& c, Eigen::Vector3d posi
       //value = atan(position.x()/position.z());
       Eigen::Vector3d dydr; // constraint feature function differentiated w.r.t. the pose of the target in the end effector frame.
       double c = 1/(1+pow(position.x()/position.z(),2));
-      dydr << 0, c/position.z(), -c*position.x()/pow(position.z(),2);
+      dydr << c/position.z(), 0, -c*position.x()/pow(position.z(),2);
       derivative = drdtwist.transpose()*dydr;
       break;
     }
