@@ -77,6 +77,14 @@ void DataSaver::openfile(ConstraintController& controller)
         myfile << "J" << i << ", ";
     }
 
+    for (int i= 0; i < constraints.size(); i++)
+    {
+        for (int j = 0; j < 6; j++)
+        {
+            myfile << "M" << i << j << ", ";
+        }
+    }
+
     myfile << "\n";
 }
 
@@ -134,6 +142,18 @@ void DataSaver::write(franka::RobotState& state, ConstraintController& controlle
     for (int i = 0; i< 42; i++)
     {
         myfile << J[i] << ", ";
+    }
+
+    // interaction matrix
+    Eigen::MatrixXd M = controller.getInteractionMatrix();
+    int nrows = static_cast<int>(M.rows()); // should be equal to nr of constraints
+    int ncols = static_cast<int>(M.cols()); // should be equal to 7
+    for (int i= 0; i < nrows; i++)
+    {
+        for (int j = 0; j < ncols; j++)
+        {
+            myfile << M(i,j) << ", ";
+        }
     }
 
     // ENDLINE

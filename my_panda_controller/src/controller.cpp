@@ -261,6 +261,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
     //logging
     constraint_values = std::vector<double>(constraints_.size(), 0);
     constraint_velocity_reference_log = std::vector<double>(constraints_.size(), 0);
+    interaction_matrix_log = Eigen::MatrixXd::Zero(constraints_.size(), 6);
 
     std::vector<int> active_constraint_index;
     // evaluate constraints values
@@ -303,6 +304,7 @@ std::array<double, 7> ConstraintController::callback(const franka::RobotState& r
       Constraint constraint = constraints_[active_constraint_index[i]];
       Eigen::Matrix<double, 1, 6> derivative = getConstraintDirection(constraint, position_box_ee_ee, orientation);
       interaction_matrix.row(i) << derivative;
+      interaction_matrix_log.row(active_constraint_index[i]) << derivative;
 
       constraint_velocity_reference(i) = constraintControl(constraint, position_box_ee_ee);
       constraint_velocity_reference_log[active_constraint_index[i]] = constraint_velocity_reference(i);
