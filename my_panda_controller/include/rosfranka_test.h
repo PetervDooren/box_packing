@@ -36,7 +36,7 @@ namespace my_panda_controller {
 
     class MyController : public controller_interface::MultiInterfaceController<
             franka_hw::FrankaModelInterface,
-            hardware_interface::EffortJointInterface,
+            hardware_interface::VelocityJointInterface,
             franka_hw::FrankaStateInterface> {
     public:
         bool init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) override;
