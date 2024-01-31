@@ -47,14 +47,14 @@ namespace my_panda_controller {
             return false;
         }
 
-        auto* effort_joint_interface = robot_hardware->get<hardware_interface::EffortJointInterface>();
-        if (effort_joint_interface == nullptr) {
-            ROS_ERROR_STREAM("MyController: Error getting effort joint interface from hardware");
+        auto* velocity_joint_interface = robot_hardware->get<hardware_interface::VelocityJointInterface>();
+        if (velocity_joint_interface == nullptr) {
+            ROS_ERROR_STREAM("MyController: Error getting velocity joint interface from hardware");
             return false;
         }
         for (size_t i = 0; i < 7; ++i) {
             try {
-                joint_handles_.push_back(effort_joint_interface->getHandle(joint_names[i]));
+                joint_handles_.push_back(velocity_joint_interface->getHandle(joint_names[i]));
             } catch (const hardware_interface::HardwareInterfaceException& ex) {
                 ROS_ERROR_STREAM("MyController: Exception getting joint handles: " << ex.what());
                 return false;
@@ -147,11 +147,8 @@ namespace my_panda_controller {
 
             //std::array<double, 7> dq_d = controller.callback(robot_state);
 
-            const std::array<double, 7> k_gains = {{50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0}};
-
             for (int i = 0; i < joint_handles_.size(); i++) {
-                double tau_d = k_gains[i] * (dq_d[i] - dq[i]);
-                joint_handles_[i].setCommand(tau_d);
+                joint_handles_[i].setCommand(dq_d[i]);
             }
         }
         else
