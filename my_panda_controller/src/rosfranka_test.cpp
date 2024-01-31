@@ -156,8 +156,10 @@ namespace my_panda_controller {
         }
         else
         {
-            for (auto joint_handle: joint_handles_) {
-                joint_handle.setCommand(0.0);
+            const std::array<double, 7> k_gains = {{50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0}};
+            for (int i = 0; i < joint_handles_.size(); i++) {
+                double tau_d = k_gains[i] * (- dq[i]);
+                joint_handles_[i].setCommand(tau_d);
             }
         }
     }

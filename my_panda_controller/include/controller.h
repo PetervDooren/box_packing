@@ -45,6 +45,7 @@ public:
     std::vector<double> getconstraintVelReferences() {return constraint_velocity_reference_log;};
     std::array<double, 7> getDqLog() {return dq_log;};
     std::array<double, 42> getJacobian() {return jacobian_array;};
+    Eigen::MatrixXd getInteractionMatrix() {return interaction_matrix_log;};
 
 private:
     //const franka::Model& model_;
@@ -60,6 +61,7 @@ private:
     std::vector<double> constraint_velocity_reference_log;
     std::array<double, 7> dq_log;
     std::array<double, 42> jacobian_array;
+    Eigen::MatrixXd interaction_matrix_log;
 
     ros::Publisher marker_publisher_;
 };
