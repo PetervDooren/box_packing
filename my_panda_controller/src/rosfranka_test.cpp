@@ -134,10 +134,10 @@ namespace my_panda_controller {
                 {
                     dq_d = sm_dq_d.dq_d;
                     sm_dq_d.has_data = false;
-                    //std::cout << "update dq_d to ";
-                    //for (int i=0; i<7; i++)
-                    //    std::cout << dq_d[i] << ", ";
-                    //std::cout << std::endl;
+                    std::cout << "update dq_d to ";
+                    for (int i=0; i<7; i++)
+                        std::cout << dq_d[i] << ", ";
+                    std::cout << std::endl;
                 }
                 sm_dq_d.mutex.unlock();
             }
@@ -148,15 +148,14 @@ namespace my_panda_controller {
             //std::array<double, 7> dq_d = controller.callback(robot_state);
 
             for (int i = 0; i < joint_handles_.size(); i++) {
+                //joint_handles_[i].setCommand(0.0);
                 joint_handles_[i].setCommand(dq_d[i]);
             }
         }
         else
         {
-            const std::array<double, 7> k_gains = {{50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0}};
             for (int i = 0; i < joint_handles_.size(); i++) {
-                double tau_d = k_gains[i] * (- dq[i]);
-                joint_handles_[i].setCommand(tau_d);
+                joint_handles_[i].setCommand(0.0);
             }
         }
     }
@@ -229,7 +228,7 @@ namespace my_panda_controller {
                     // calculate new joint velocity reference
                     std::array<double, 7> dq_d = {0, 0, 0, 0, 0, 0, 0};
                     if (!controller_stopped)
-                        std::array<double, 7> dq_d = controller.callback(robot_state);
+                        dq_d = controller.callback(robot_state);
                     else
                         std::cout << "controller stopped" << std::endl;
 
